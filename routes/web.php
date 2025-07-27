@@ -15,8 +15,8 @@ use App\Http\Controllers\PelabuhanMerakController;
 use App\Http\Controllers\PelabuhanBakauheniController;
 
 use App\Http\Controllers\KinerjaIFCSController;
-use App\Http\Controllers\KomposisiSegmenController;
-use App\Http\Controllers\MarketLintasanController;
+use App\Http\Controllers\komposisiSegmenController;
+use App\Http\Controllers\marketLintasanController;
 use App\Http\Controllers\LabaKapalController;
 
 use App\Jobs\RunProphetForecast;
@@ -72,10 +72,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/kinerja-ifcs/{id}/update', [kinerjaIfcsController::class, 'updatePost'])->name('kinerja-ifcs.updatePost');
 
         // Komposisi Segmen
-        Route::get('/komposisi-segmen', [KomposisiSegmenController::class, 'index'])->name('komposisi.index');
+        Route::get('/komposisi-segmen', [komposisiSegmenController::class, 'index'])->name('komposisi.index');
 
         // Market Lintasan
-        Route::get('/market-lintasan', [MarketLintasanController::class, 'index'])->name('market-lintasan.index');
+        Route::get('/market-lintasan', [marketLintasanController::class, 'index'])->name('market-lintasan.index');
 
         // Laba Kapal
         Route::get('/laba-kapal', [labaKapalController::class, 'index'])->name('laba-kapal.index');
