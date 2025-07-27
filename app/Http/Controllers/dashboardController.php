@@ -15,7 +15,7 @@ use Symfony\Component\Process\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
 
-class DashboardController extends Controller
+class dashboardController extends Controller
 {
     private function getDashboardData($request, $forecast = null)
     {

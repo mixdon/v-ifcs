@@ -10,7 +10,7 @@ use League\Csv\Reader;
 use League\Csv\Statement;
 use App\Services\DataWarehouseService;
 
-class PelabuhanBakauheniController extends Controller
+class pelabuhanBakauheniController extends Controller
 {
     public function index(Request $request)
     {

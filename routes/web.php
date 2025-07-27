@@ -8,25 +8,25 @@ use App\Http\Controllers\SessionsController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\InfoUserController;
-use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\userManagementController;
 
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PelabuhanMerakController;
-use App\Http\Controllers\PelabuhanBakauheniController;
+use App\Http\Controllers\dashboardController;
+use App\Http\Controllers\pelabuhanMerakController;
+use App\Http\Controllers\pelabuhanBakauheniController;
 
-use App\Http\Controllers\KinerjaIFCSController;
+use App\Http\Controllers\kinerjaIFCSController;
 use App\Http\Controllers\komposisiSegmenController;
 use App\Http\Controllers\marketLintasanController;
-use App\Http\Controllers\LabaKapalController;
+use App\Http\Controllers\labaKapalController;
 
 use App\Jobs\RunProphetForecast;
 
 // Route untuk pengguna yang sudah login
 Route::middleware('auth')->group(function () {
 
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::post('/etl/trigger', [DashboardController::class, 'triggerEtl'])->name('etl.trigger');
-    Route::post('/run-forecast', [DashboardController::class, 'runForecast'])->name('runForecast');
+    Route::get('/dashboard', [dashboardController::class, 'index'])->name('dashboard');
+    Route::post('/etl/trigger', [dashboardController::class, 'triggerEtl'])->name('etl.trigger');
+    Route::post('/run-forecast', [dashboardController::class, 'runForecast'])->name('runForecast');
 
     Route::get('/profile', function () {
         return view('profile');
@@ -40,36 +40,36 @@ Route::middleware('auth')->group(function () {
 
     // Route khusus admin
     Route::middleware('role:admin')->group(function () {
-        Route::get('/user-management', [UserManagementController::class, 'index'])->name('user-management.index');
-        Route::post('/user-management/{user}', [UserManagementController::class, 'update'])->name('user-management.update');
-        Route::delete('/user_management/{id}', [UserManagementController::class, 'delete'])->name('user-management.delete');
-        Route::post('/user-management', [UserManagementController::class, 'store'])->name('user-management.store');
+        Route::get('/user-management', [userManagementController::class, 'index'])->name('user-management.index');
+        Route::post('/user-management/{user}', [userManagementController::class, 'update'])->name('user-management.update');
+        Route::delete('/user_management/{id}', [userManagementController::class, 'delete'])->name('user-management.delete');
+        Route::post('/user-management', [userManagementController::class, 'store'])->name('user-management.store');
 
     });
 
     // Route untuk admin dan karyawan
     Route::middleware('role:admin,karyawan')->group(function () {
         // Pelabuhan Merak
-        Route::get('/merak', [PelabuhanMerakController::class, 'index'])->name('pelabuhan.merak.index');
-        Route::post('/merak/upload', [PelabuhanMerakController::class, 'uploadcsvPelabuhanMerak'])->name('pelabuhan.merak.upload');
-        Route::delete('/merak/{id}', [PelabuhanMerakController::class, 'delete'])->name('pelabuhan.merak.delete');
-        Route::get('/edit-merak/edit/{id}', [PelabuhanMerakController::class, 'edit'])->name('pelabuhan-merak.edit');
-        Route::post('/pelabuhan-merak/{id}/update', [PelabuhanMerakController::class, 'updatePost'])->name('pelabuhan-merak.updatePost');
-        Route::post('/pelabuhan-merak/run-etl/{tahun}', [PelabuhanMerakController::class, 'runEtl'])->name('pelabuhan.merak.run-etl');
+        Route::get('/merak', [pelabuhanMerakController::class, 'index'])->name('pelabuhan.merak.index');
+        Route::post('/merak/upload', [pelabuhanMerakController::class, 'uploadcsvPelabuhanMerak'])->name('pelabuhan.merak.upload');
+        Route::delete('/merak/{id}', [pelabuhanMerakController::class, 'delete'])->name('pelabuhan.merak.delete');
+        Route::get('/edit-merak/edit/{id}', [pelabuhanMerakController::class, 'edit'])->name('pelabuhan-merak.edit');
+        Route::post('/pelabuhan-merak/{id}/update', [pelabuhanMerakController::class, 'updatePost'])->name('pelabuhan-merak.updatePost');
+        Route::post('/pelabuhan-merak/run-etl/{tahun}', [pelabuhanMerakController::class, 'runEtl'])->name('pelabuhan.merak.run-etl');
 
         // Pelabuhan Bakauheni
-        Route::get('/bakauheni', [PelabuhanBakauheniController::class, 'index'])->name('pelabuhan.bakauheni.index');
-        Route::post('/bakauheni/upload', [PelabuhanBakauheniController::class, 'uploadcsvPelabuhanBakauheni'])->name('pelabuhan.bakauheni.upload');
-        Route::delete('/pelabuhan-bakauheni/{id}', [PelabuhanBakauheniController::class, 'delete'])->name('pelabuhan.bakauheni.delete');
-        Route::get('/edit-bakauheni/edit/{id}', [PelabuhanBakauheniController::class, 'edit'])->name('pelabuhan-bakauheni.edit');
-        Route::post('/pelabuhan-bakauheni/{id}/update', [PelabuhanBakauheniController::class, 'updatePost'])->name('pelabuhan-bakauheni.updatePost');
-        Route::post('/pelabuhan-bakauheni/run-etl/{tahun}', [PelabuhanBakauheniController::class, 'runEtl'])->name('pelabuhan.bakauheni.run-etl');
+        Route::get('/bakauheni', [pelabuhanBakauheniController::class, 'index'])->name('pelabuhan.bakauheni.index');
+        Route::post('/bakauheni/upload', [pelabuhanBakauheniController::class, 'uploadcsvPelabuhanBakauheni'])->name('pelabuhan.bakauheni.upload');
+        Route::delete('/pelabuhan-bakauheni/{id}', [pelabuhanBakauheniController::class, 'delete'])->name('pelabuhan.bakauheni.delete');
+        Route::get('/edit-bakauheni/edit/{id}', [pelabuhanBakauheniController::class, 'edit'])->name('pelabuhan-bakauheni.edit');
+        Route::post('/pelabuhan-bakauheni/{id}/update', [pelabuhanBakauheniController::class, 'updatePost'])->name('pelabuhan-bakauheni.updatePost');
+        Route::post('/pelabuhan-bakauheni/run-etl/{tahun}', [pelabuhanBakauheniController::class, 'runEtl'])->name('pelabuhan.bakauheni.run-etl');
 
         // Kinerja IFCS
-        Route::get('/kinerja-ifcs', [kinerjaIfcsController::class, 'index'])->name('kinerja-ifcs.index');
-        Route::post('/kinerja-ifcs/upload', [kinerjaIfcsController::class, 'uploadcsvKinerja'])->name('kinerja-ifcs.uploadcsv');
-        Route::delete('/kinerja-ifcs/{id}', [kinerjaIfcsController::class, 'delete'])->name('kinerja-ifcs.delete');
-        Route::post('/kinerja-ifcs/{id}/update', [kinerjaIfcsController::class, 'updatePost'])->name('kinerja-ifcs.updatePost');
+        Route::get('/kinerja-ifcs', [kinerjaIFCSController::class, 'index'])->name('kinerja-ifcs.index');
+        Route::post('/kinerja-ifcs/upload', [kinerjaIFCSController::class, 'uploadcsvKinerja'])->name('kinerja-ifcs.uploadcsv');
+        Route::delete('/kinerja-ifcs/{id}', [kinerjaIFCSController::class, 'delete'])->name('kinerja-ifcs.delete');
+        Route::post('/kinerja-ifcs/{id}/update', [kinerjaIFCSController::class, 'updatePost'])->name('kinerja-ifcs.updatePost');
 
         // Komposisi Segmen
         Route::get('/komposisi-segmen', [komposisiSegmenController::class, 'index'])->name('komposisi.index');

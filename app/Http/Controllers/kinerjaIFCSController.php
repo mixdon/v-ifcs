@@ -9,7 +9,7 @@ use App\Models\kinerja_ifcs; // Menggunakan model kinerja_ifcs
 use League\Csv\Reader; 
 use League\Csv\Statement;
 
-class KinerjaIfcsController extends Controller
+class kinerjaIFCSController extends Controller
 {
     public function index(Request $request)
     {

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 
-class UserManagementController extends Controller
+class userManagementController extends Controller
 {
     public function index(Request $request)
     {

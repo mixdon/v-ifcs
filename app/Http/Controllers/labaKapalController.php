@@ -9,7 +9,7 @@ use App\Models\laba_kapal; // Corrected model name
 use League\Csv\Reader;
 use League\Csv\Statement;
 
-class LabaKapalController extends Controller
+class labaKapalController extends Controller
 {
     public function index(Request $request)
     {
