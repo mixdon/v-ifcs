@@ -10,25 +10,25 @@ use App\Models\DimWaktu;
 use App\Models\DimLayanan;
 use App\Models\DimPelabuhan;
 use Illuminate\Support\Facades\Artisan;
+use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request)
+    private function getDashboardData($request, $forecast = null)
     {
         $currentYear = date('Y');
         
-        // --- BARIS YANG DISESUAIKAN ---
-        // Mengambil tahun yang valid dari tabel DimWaktu, tetapi membatasi hanya sampai tahun saat ini.
         $validYears = DimWaktu::select('tahun')
-                            ->where('tahun', '<=', $currentYear) // Filter untuk membatasi tahun
+                            ->where('tahun', '<=', $currentYear)
                             ->distinct()
                             ->orderBy('tahun', 'asc')
                             ->pluck('tahun')
                             ->toArray();
 
         $selectedYear = $request->input('tahun', $currentYear);
-
-        // Jika tahun yang dipilih tidak ada di daftar tahun yang valid, gunakan tahun saat ini.
         if (!in_array($selectedYear, $validYears)) {
             $selectedYear = $currentYear;
         }
@@ -45,10 +45,7 @@ class DashboardController extends Controller
         $regulerLayananId = DimLayanan::where('jenis_layanan', 'reguler')->value('layanan_id');
         $redeemLayananId = DimLayanan::where('jenis_layanan', 'redeem')->value('layanan_id');
 
-
         // --- Data untuk Kartu Ringkasan (Top 4 Cards) ---
-
-        // Card 1: Total Pendapatan IFCS (Semua Tahun)
         $totalRevenueIfcsAllYears = FactKinerjaIFCS::select(
                 DB::raw('SUM(fact_kinerja_ifcs.total_pendapatan) as total_revenue')
             )
@@ -56,8 +53,6 @@ class DashboardController extends Controller
             ->where('fact_kinerja_ifcs.layanan_id', $ifcsLayananId)
             ->value('total_revenue') ?? 0;
 
-
-        // Card 2: Total Pendapatan IFCS (Tahun Saat Ini)
         $totalRevenueIfcsCurrentYear = FactKinerjaIFCS::select(
                 DB::raw('SUM(fact_kinerja_ifcs.total_pendapatan) as total_revenue')
             )
@@ -67,8 +62,6 @@ class DashboardController extends Controller
             ->where('dim_waktu.tahun', $selectedYear)
             ->value('total_revenue') ?? 0;
 
-
-        // Card 3: Total Produksi IFCS (Semua Tahun)
         $totalProductionIfcsAllYears = FactKinerjaIFCS::select(
                 DB::raw('SUM(fact_kinerja_ifcs.jumlah_produksi) as total_production')
             )
@@ -76,8 +69,6 @@ class DashboardController extends Controller
             ->where('fact_kinerja_ifcs.layanan_id', $ifcsLayananId)
             ->value('total_production') ?? 0;
 
-
-        // Card 4: Total Produksi IFCS (Tahun Saat Ini)
         $totalProductionIfcsCurrentYear = FactKinerjaIFCS::select(
                 DB::raw('SUM(fact_kinerja_ifcs.jumlah_produksi) as total_production')
             )
@@ -86,7 +77,6 @@ class DashboardController extends Controller
             ->where('fact_kinerja_ifcs.layanan_id', $ifcsLayananId)
             ->where('dim_waktu.tahun', $selectedYear)
             ->value('total_production') ?? 0;
-
 
         // --- Data untuk Chart Total Pendapatan Layanan IFCS (Per Tahun) ---
         $ifcsRevenuePerYear = FactKinerjaIFCS::select(
@@ -99,7 +89,6 @@ class DashboardController extends Controller
             ->groupBy('dim_waktu.tahun')
             ->orderBy('dim_waktu.tahun')
             ->get();
-
         $ifcsRevenueChartData = [];
         foreach ($ifcsRevenuePerYear as $item) {
             $ifcsRevenueChartData[$item->tahun] = $item->total_revenue;
@@ -118,7 +107,6 @@ class DashboardController extends Controller
             ->groupBy('dim_waktu.bulan_numerik', 'dim_waktu.bulan')
             ->orderBy('dim_waktu.bulan_numerik')
             ->get();
-
         $ifcsMonthlyRevenueChartData = [];
         $ifcsMonthlyRevenueChartLabels = [];
         foreach ($ifcsMonthlyRevenueData as $item) {
@@ -137,7 +125,6 @@ class DashboardController extends Controller
             ->groupBy('dim_waktu.tahun')
             ->orderBy('dim_waktu.tahun')
             ->get();
-
         $ifcsProductionChartData = [];
         foreach ($ifcsProductionPerYear as $item) {
             $ifcsProductionChartData[$item->tahun] = $item->total_production;
@@ -156,7 +143,6 @@ class DashboardController extends Controller
             ->groupBy('dim_waktu.bulan_numerik', 'dim_waktu.bulan')
             ->orderBy('dim_waktu.bulan_numerik')
             ->get();
-        
         $ifcsMonthlyProductionChartData = [];
         $ifcsMonthlyProductionChartLabels = [];
         foreach ($ifcsMonthlyProductionData as $item) {
@@ -164,26 +150,22 @@ class DashboardController extends Controller
             $ifcsMonthlyProductionChartLabels[] = $item->bulan;
         }
 
-
         // --- Data untuk Chart Market Lintasan (IFCS vs Industri) - Semua Tahun (Stacked Bar) ---
         $results1 = DB::table('market_lintasan')
             ->select('tahun', 'jenis', DB::raw('SUM(gabungan) as total'))
             ->where('golongan', '=', 'Total')
-            ->where('tahun', '<=', $currentYear) // Menambahkan filter tahun
+            ->where('tahun', '<=', $currentYear)
             ->groupBy('tahun', 'jenis')
             ->get();
-        
         $marketData_temp = [];
         foreach ($results1 as $result1) {
             $marketData_temp[$result1->tahun][$result1->jenis] = $result1->total;
         }
-        
         $marketLintasanData = [];
         foreach ($marketData_temp as $year => $data) {
             $totalIfcs = $data['ifcs'] ?? 0;
             $totalIndustri = $data['industri'] ?? 0;
             $total = $totalIfcs + $totalIndustri;
-        
             $marketLintasanData[] = [
                 'tahun' => $year,
                 'ifcs_value' => $totalIfcs,
@@ -202,9 +184,8 @@ class DashboardController extends Controller
             ->select('tahun', 'ifcs_redeem', 'nonifcs')
             ->where('golongan', '=', 'Total')
             ->where('jenis', 'gabungan')
-            ->where('tahun', '<=', $currentYear) // Menambahkan filter tahun
+            ->where('tahun', '<=', $currentYear)
             ->get();
-
         $komposisiData_temp = [];
         foreach ($results0 as $result0) {
             $komposisiData_temp[$result0->tahun] = [
@@ -212,13 +193,11 @@ class DashboardController extends Controller
                 'nonifcs' => $result0->nonifcs
             ];
         }
-
         $annualProductionCompositionData = [];
         foreach ($komposisiData_temp as $year => $data) {
             $totalifcsredeem = $data['ifcs_redeem'] ?? 0;
             $totalnonifcs = $data['nonifcs'] ?? 0;
             $total = $totalifcsredeem + $totalnonifcs;
-        
             $annualProductionCompositionData[] = [
                 'tahun' => $year,
                 'ifcs_value' => $totalifcsredeem,
@@ -234,7 +213,7 @@ class DashboardController extends Controller
             return $a['tahun'] <=> $b['tahun'];
         });
 
-        return view('dashboard', compact(
+        return compact(
             'selectedYear',
             'validYears',
             'totalRevenueIfcsAllYears',
@@ -251,17 +230,92 @@ class DashboardController extends Controller
             'marketLintasanData',
             'revenueViewMode',
             'productionViewMode',
-        ));
+            'forecast',
+        );
+    }
+
+    public function index(Request $request)
+    {
+        $data = $this->getDashboardData($request);
+        return view('dashboard', $data);
     }
     
     public function triggerEtl()
     {
         try {
             Artisan::call('etl:run');
-            
             return redirect()->route('dashboard')->with('success', 'Proses ETL berhasil dijalankan!');
         } catch (\Exception $e) {
             return redirect()->route('dashboard')->with('error', 'Gagal menjalankan proses ETL: ' . $e->getMessage());
+        }
+    }
+
+    public function runForecast(Request $request)
+    {
+        try {
+            // Ambil data dari tabel `fact_kinerja_ifcs` dan format sebagai ds, y
+            $data = DB::table('fact_kinerja_ifcs')
+                ->selectRaw("STR_TO_DATE(waktu_id, '%Y%m%d') as ds, SUM(jumlah_produksi) as y")
+                ->groupBy('waktu_id')
+                ->orderBy('waktu_id')
+                ->get();
+
+            // Simpan data jadi CSV untuk Python
+            $csvPath = storage_path('app/forecast.csv');
+            $file = fopen($csvPath, 'w');
+            fputcsv($file, ['ds', 'y']);
+            foreach ($data as $row) {
+                fputcsv($file, [$row->ds, $row->y]);
+            }
+            fclose($file);
+
+            // Jalankan script Python dengan path absolut
+            $python = 'C:\\Users\\NITRO 5\\AppData\\Local\\Programs\\Python\\Python310\\python.exe';
+            $script = 'D:\\Git\\V-IFCS\\python_scripts\\forecast.py'; 
+            
+            // Menggunakan Symfony Process dengan variabel lingkungan yang diperbarui
+            // Tambahkan variabel HOME atau USERPROFILE untuk mengatasi error "Could not determine home directory"
+            $process = new Process(
+                [$python, $script, $csvPath], 
+                null, 
+                [
+                    'SYSTEMROOT' => getenv('SYSTEMROOT'),
+                    'PATH' => getenv('PATH'),
+                    // Tambahkan variabel USERPROFILE untuk Windows atau HOME untuk Linux
+                    'USERPROFILE' => getenv('USERPROFILE') // Pastikan ini sesuai dengan OS Anda
+                ]
+            );
+            $process->run();
+
+            // Eksekusi jika gagal
+            if (!$process->isSuccessful()) {
+                throw new ProcessFailedException($process);
+            }
+
+            // Ambil hasil forecast dari file CSV
+            $forecastPath = storage_path('app/forecast_result.csv');
+            $forecast = [];
+            if (file_exists($forecastPath)) {
+                $rows = array_map('str_getcsv', file($forecastPath));
+                if (count($rows) > 0) {
+                    $header = array_shift($rows);
+                    foreach ($rows as $row) {
+                        if (count($row) === count($header)) {
+                             $forecast[] = array_combine($header, $row);
+                        }
+                    }
+                }
+            }
+
+            $dashboardData = $this->getDashboardData($request, $forecast);
+            return view('dashboard', $dashboardData);
+
+        } catch (ProcessFailedException $exception) {
+            // Penanganan error jika skrip Python gagal
+            return redirect()->route('dashboard')->with('error', 'Gagal menjalankan skrip Python: ' . $exception->getMessage() . ' | Output: ' . $exception->getProcess()->getOutput() . ' | Error Output: ' . $exception->getProcess()->getErrorOutput());
+        } catch (\Exception $e) {
+            // Penanganan error umum
+            return redirect()->route('dashboard')->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 }
