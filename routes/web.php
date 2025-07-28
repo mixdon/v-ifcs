@@ -67,9 +67,9 @@ Route::middleware('auth')->group(function () {
 
         // Kinerja IFCS
         Route::get('/kinerja-ifcs', [kinerjaIFCSController::class, 'index'])->name('kinerja-ifcs.index');
-        Route::post('/kinerja-ifcs/upload', [kinerjaIFCSController::class, 'uploadcsvKinerja'])->name('kinerja-ifcs.uploadcsv');
-        Route::delete('/kinerja-ifcs/{id}', [kinerjaIFCSController::class, 'delete'])->name('kinerja-ifcs.delete');
-        Route::post('/kinerja-ifcs/{id}/update', [kinerjaIFCSController::class, 'updatePost'])->name('kinerja-ifcs.updatePost');
+        Route::post('/kinerja-ifcs/uploadcsv', [kinerjaIFCSController::class, 'uploadcsv'])->name('kinerja-ifcs.uploadcsv');
+        Route::post('/kinerja-ifcs/{id}/update', [kinerjaIFCSController::class, 'update'])->name('kinerja-ifcs.update');
+        Route::delete('/kinerja-ifcs/{id}/delete', [kinerjaIFCSController::class, 'delete'])->name('kinerja-ifcs.delete');
 
         // Komposisi Segmen
         Route::get('/komposisi-segmen', [komposisiSegmenController::class, 'index'])->name('komposisi.index');

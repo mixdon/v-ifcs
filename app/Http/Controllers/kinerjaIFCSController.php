@@ -2,166 +2,197 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KinerjaIfcs; // Asumsi model KinerjaIfcs
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
-use App\Models\kinerja_ifcs; // Menggunakan model kinerja_ifcs
-use League\Csv\Reader; 
-use League\Csv\Statement;
+use Illuminate\Support\Facades\Validator;
+use Exception;
 
 class kinerjaIFCSController extends Controller
 {
+    /**
+     * Menampilkan halaman data Kinerja IFCS dengan filter tahun.
+     *
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
     public function index(Request $request)
     {
-        $currentYear = date('Y');
-        $startYear = 2020;
-        $validYears = range($startYear, $currentYear);
-        $tahun = $request->input('tahun', null);
-    
-        $yearsToFetch = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
-    
-        foreach ($yearsToFetch as $y) {
-            $this->simpanDataTotalKinerja($y);
-        }
-    
-        $kinerja_ifcs = kinerja_ifcs::whereIn('tahun', $yearsToFetch)->get();
+        // Ambil daftar tahun unik dari database untuk filter
+        $years = KinerjaIfcs::select(DB::raw('YEAR(created_at) as year'))
+                            ->distinct()
+                            ->orderBy('year', 'desc')
+                            ->pluck('year');
         
-        return view('ifcs.kinerja-ifcs', [
-            'kinerja_ifcs' => $kinerja_ifcs,
-            'years' => $validYears,
-            'selectedYear' => $tahun 
-        ]);
-    }    
+        $selectedYear = $request->input('tahun');
 
-    public function edit($id)
-    {
-        $record = kinerja_ifcs::findOrFail($id);
-        return view('ifcs.edit-kinerja', compact('record')); 
-    }
+        $query = KinerjaIfcs::query();
 
-    public function updatePost(Request $request, $id)
-    {
-        $validatedData = $request->validate([
-            'golongan' => 'required|string|max:255',
-            'januari' => 'required|numeric',
-            'februari' => 'required|numeric',
-            'maret' => 'required|numeric',
-            'april' => 'required|numeric',
-            'mei' => 'required|numeric',
-            'juni' => 'required|numeric',
-            'juli' => 'required|numeric',
-            'agustus' => 'required|numeric',
-            'september' => 'required|numeric',
-            'oktober' => 'required|numeric',
-            'november' => 'required|numeric',
-            'desember' => 'required|numeric',
-            'tahun' => 'required|numeric',
-        ]);
-    
-        $record = kinerja_ifcs::findOrFail($id);
-        $record->update($validatedData);
-
-        $this->simpanDataTotalKinerja($record->tahun);
-    
-        $tahunRedirect = $record->tahun; 
-
-        return redirect()->route('kinerja-ifcs.index', ['tahun' => $tahunRedirect])
-                         ->with('update_kinerja_ifcs_success', 'Data berhasil diperbarui.');
-    }
-
-    public function uploadcsvKinerja(Request $request)
-    {
-        $request->validate([
-            'csv_file' => 'required|file|mimes:csv,txt',
-        ]);
-        if (!$request->hasFile('csv_file')) {
-            return redirect()->back()->with('upload_kinerja_ifcs_fail', 'Tidak ada file yang terpilih.');
+        if ($selectedYear) {
+            $query->where(DB::raw('YEAR(created_at)'), $selectedYear);
         }
+
+        $kinerja_ifcs = $query->get();
+
+        return view('kinerja-ifcs', compact('kinerja_ifcs', 'years', 'selectedYear'));
+    }
+
+    /**
+     * Menangani proses unggah file CSV dan menghitung total.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function uploadcsv(Request $request)
+    {
+        // Validasi bahwa file yang diunggah adalah CSV
+        $validator = Validator::make($request->all(), [
+            'csv_file' => 'required|mimes:csv,txt|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->with('upload_kinerja_ifcs_fail', 'File harus berformat CSV dan tidak boleh melebihi 2MB.');
+        }
+
         try {
             $path = $request->file('csv_file')->getRealPath();
-            $csv = Reader::createFromPath($path, 'r');
-            $csv->setHeaderOffset(0);
-            $csv->setDelimiter(';');
-            $records = (new Statement())->process($csv);
+            $data = array_map('str_getcsv', file($path));
 
-            $uploadedYears = [];
-            foreach ($records as $record) {
-                $kinerjaIfcsRecord = kinerja_ifcs::updateOrCreate(
-                    ['tahun' => $record['tahun'], 'golongan' => $record['golongan']],
+            // Lewati header CSV
+            $header = array_shift($data);
+
+            DB::beginTransaction();
+
+            foreach ($data as $row) {
+                // Pastikan baris data memiliki 13 kolom (Golongan + 12 bulan)
+                if (count($row) < 13) {
+                    continue; 
+                }
+
+                $golongan = $row[0];
+                $monthlyData = array_slice($row, 1, 12);
+                $total = 0;
+
+                // Hitung total dari data bulanan
+                foreach ($monthlyData as $value) {
+                    // Konversi nilai ke integer sebelum menjumlahkan
+                    $total += (int) preg_replace('/[^0-9]/', '', $value);
+                }
+
+                // Buat atau perbarui record
+                KinerjaIfcs::updateOrCreate(
                     [
-                        'januari' => $record['januari'],
-                        'februari' => $record['februari'],
-                        'maret' => $record['maret'],
-                        'april' => $record['april'],
-                        'mei' => $record['mei'],
-                        'juni' => $record['juni'],
-                        'juli' => $record['juli'],
-                        'agustus' => $record['agustus'],
-                        'september' => $record['september'],
-                        'oktober' => $record['oktober'],
-                        'november' => $record['november'],
-                        'desember' => $record['desember'],
+                        'golongan' => $golongan,
+                        'tahun' => date('Y') // Asumsi tahun saat ini
+                    ],
+                    [
+                        'januari' => (int) preg_replace('/[^0-9]/', '', $row[1]),
+                        'februari' => (int) preg_replace('/[^0-9]/', '', $row[2]),
+                        'maret' => (int) preg_replace('/[^0-9]/', '', $row[3]),
+                        'april' => (int) preg_replace('/[^0-9]/', '', $row[4]),
+                        'mei' => (int) preg_replace('/[^0-9]/', '', $row[5]),
+                        'juni' => (int) preg_replace('/[^0-9]/', '', $row[6]),
+                        'juli' => (int) preg_replace('/[^0-9]/', '', $row[7]),
+                        'agustus' => (int) preg_replace('/[^0-9]/', '', $row[8]),
+                        'september' => (int) preg_replace('/[^0-9]/', '', $row[9]),
+                        'oktober' => (int) preg_replace('/[^0-9]/', '', $row[10]),
+                        'november' => (int) preg_replace('/[^0-9]/', '', $row[11]),
+                        'desember' => (int) preg_replace('/[^0-9]/', '', $row[12]),
+                        'total' => $total, // Total sudah dihitung di atas
                     ]
                 );
-                $uploadedYears[] = $kinerjaIfcsRecord->tahun;
             }
 
-            $uniqueUploadedYears = array_unique($uploadedYears);
-            foreach ($uniqueUploadedYears as $tahun) {
-                $this->simpanDataTotalKinerja($tahun);
-            }
+            DB::commit();
+            return redirect()->back()->with('upload_kinerja_ifcs_success', 'Data Kinerja IFCS berhasil diunggah.');
 
-            return redirect()->back()->with('upload_kinerja_ifcs_success', 'File CSV berhasil diupload');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('upload_kinerja_ifcs_fail', 'Terjadi kesalahan saat mengupload file CSV: ' . $e->getMessage());
+        } catch (Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('upload_kinerja_ifcs_fail', 'Terjadi kesalahan saat mengunggah data: ' . $e->getMessage());
         }
     }
 
-    public function simpanDataTotalKinerja($tahun)
+    /**
+     * Memperbarui data Kinerja IFCS dan menghitung ulang total.
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function update(Request $request, $id)
     {
-        if (!$tahun) {
-            return;
+        // Validasi input
+        $validator = Validator::make($request->all(), [
+            'golongan' => 'required|string|max:255',
+            'januari' => 'nullable|numeric',
+            'februari' => 'nullable|numeric',
+            'maret' => 'nullable|numeric',
+            'april' => 'nullable|numeric',
+            'mei' => 'nullable|numeric',
+            'juni' => 'nullable|numeric',
+            'juli' => 'nullable|numeric',
+            'agustus' => 'nullable|numeric',
+            'september' => 'nullable|numeric',
+            'oktober' => 'nullable|numeric',
+            'november' => 'nullable|numeric',
+            'desember' => 'nullable|numeric',
+            'tahun' => 'required|numeric'
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        $months = [
-            'januari', 'februari', 'maret', 'april', 'mei', 
-            'juni', 'juli', 'agustus', 'september', 'oktober', 
-            'november', 'desember'
-        ];
+        try {
+            $kinerja = KinerjaIfcs::findOrFail($id);
 
-        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+            // Hitung ulang total dari data bulanan yang baru
+            $total = (int) $request->januari + (int) $request->februari + (int) $request->maret +
+                     (int) $request->april + (int) $request->mei + (int) $request->juni +
+                     (int) $request->juli + (int) $request->agustus + (int) $request->september +
+                     (int) $request->oktober + (int) $request->november + (int) $request->desember;
+            
+            // Perbarui data
+            $kinerja->update([
+                'golongan' => $request->golongan,
+                'januari' => $request->januari,
+                'februari' => $request->februari,
+                'maret' => $request->maret,
+                'april' => $request->april,
+                'mei' => $request->mei,
+                'juni' => $request->juni,
+                'juli' => $request->juli,
+                'agustus' => $request->agustus,
+                'september' => $request->september,
+                'oktober' => $request->oktober,
+                'november' => $request->november,
+                'desember' => $request->desember,
+                'tahun' => $request->tahun,
+                'total' => $total, // Gunakan total yang sudah dihitung
+            ]);
 
-        $totals = [];
-        foreach ($months as $month) {
-            $totals[$month] = kinerja_ifcs::where('tahun', $tahun)
-                ->whereIn('golongan', $golongans)
-                ->sum($month);
+            return redirect()->back()->with('update_kinerja_ifcs_success', 'Data Kinerja IFCS berhasil diperbarui.');
+
+        } catch (Exception $e) {
+            return redirect()->back()->with('update_kinerja_ifcs_fail', 'Terjadi kesalahan saat memperbarui data: ' . $e->getMessage());
         }
-
-        $totalIfcs = array_sum($totals);
-
-        kinerja_ifcs::updateOrCreate(
-            ['golongan' => 'Total', 'tahun' => $tahun],
-            array_merge($totals, ['total' => $totalIfcs])
-        );
     }
 
-    public function delete(Request $request, $id)
+    /**
+     * Menghapus data Kinerja IFCS.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function delete($id)
     {
         try {
-            $record = kinerja_ifcs::findOrFail($id);
-            $tahunAffected = $record->tahun;
+            $kinerja = KinerjaIfcs::findOrFail($id);
+            $kinerja->delete();
 
-            if ($record->delete()) {
-                $this->simpanDataTotalKinerja($tahunAffected);
-                
-                return redirect()->route('kinerja-ifcs.index', ['tahun' => $tahunAffected])
-                                 ->with('delete_kinerja_ifcs_success', 'Data berhasil dihapus.');
-            } else {
-                return redirect()->back()->with('delete_kinerja_ifcs_fail', 'Gagal menghapus data.');
-            }
-        } catch (\Exception $e) {
-            return redirect()->back()->with('delete_kinerja_ifcs_fail', 'Terjadi kesalahan: ' . $e->getMessage());
+            return redirect()->back()->with('delete_kinerja_ifcs_success', 'Data Kinerja IFCS berhasil dihapus.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('delete_kinerja_ifcs_fail', 'Terjadi kesalahan saat menghapus data: ' . $e->getMessage());
         }
     }
 }
