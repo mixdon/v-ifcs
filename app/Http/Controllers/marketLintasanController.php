@@ -35,25 +35,26 @@ class marketLintasanController extends Controller
             $this->simpanDataEksekutifNonIFCS($year);
             $this->simpanDataTotalINDUSTRI($year);
         }
-        
-        // Perbaikan: Mengambil dan mengelompokkan data
+    
+        // PERBAIKAN: Menambahkan 'tahun' pada klausa groupBy dan orderBy
         $market_lintasan = market_lintasan::whereIn('tahun', $years)
-            ->select('jenis', 'golongan',
+            ->select('jenis', 'golongan', 'tahun',
                 DB::raw('SUM(merak) as merak'),
                 DB::raw('SUM(bakauheni) as bakauheni'),
                 DB::raw('SUM(gabungan) as gabungan')
             )
-            ->groupBy('jenis', 'golongan')
+            ->groupBy('jenis', 'golongan', 'tahun')
+            ->orderBy('tahun') // Urutkan berdasarkan tahun terlebih dahulu
             ->orderBy('jenis')
             ->orderBy('golongan')
             ->get();
-        
+    
         return view('ifcs.market-lintasan', [
             'market_lintasan' => $market_lintasan,
             'years' => $validYears,
             'selectedYear' => $tahun 
         ]);
-    }  
+    }      
     
     //IFCS
     public function simpanDataEksekutifIFCS($tahun)
