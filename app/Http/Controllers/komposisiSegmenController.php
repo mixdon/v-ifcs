@@ -12,71 +12,33 @@ use Illuminate\Database\QueryException;
 
 class komposisiSegmenController extends Controller
 {
+    // Metode index sekarang hanya mengambil dan menampilkan data yang sudah ada.
     public function index(Request $request)
     {
         $currentYear = date('Y');
         $startYear = 2020;
         $validYears = range($startYear, $currentYear);
         $tahun = $request->input('tahun', null);
-
-        $years = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
+        $yearsToFetch = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
 
         try {
-            foreach ($years as $year) {
-                // Merak
-                $this->simpanDataMerakIVA($year);
-                $this->simpanDataMerakIVB($year);
-                $this->simpanDataMerakVA($year);
-                $this->simpanDataMerakVB($year);
-                $this->simpanDataMerakVIA($year);
-                $this->simpanDataMerakVIB($year);
-                $this->simpanDataMerakVII($year);
-                $this->simpanDataMerakVIII($year);
-                $this->simpanDataMerakIX($year);
-                $this->simpanDataTotalMerak($year);
+            $komposisi_segmen = komposisi_segmen::whereIn('tahun', $yearsToFetch)->get();
 
-                // Bakauheni
-                $this->simpanDataBakauheniIVA($year);
-                $this->simpanDataBakauheniIVB($year);
-                $this->simpanDataBakauheniVA($year);
-                $this->simpanDataBakauheniVB($year);
-                $this->simpanDataBakauheniVIA($year);
-                $this->simpanDataBakauheniVIB($year);
-                $this->simpanDataBakauheniVII($year);
-                $this->simpanDataBakauheniVIII($year);
-                $this->simpanDataBakauheniIX($year);
-                $this->simpanDataTotalBakauheni($year);
-
-                // Gabungan
-                $this->simpanDataGabunganIVA($year);
-                $this->simpanDataGabunganIVB($year);
-                $this->simpanDataGabunganVA($year);
-                $this->simpanDataGabunganVB($year);
-                $this->simpanDataGabunganVIA($year);
-                $this->simpanDataGabunganVIB($year);
-                $this->simpanDataGabunganVII($year);
-                $this->simpanDataGabunganVIII($year);
-                $this->simpanDataGabunganIX($year);
-                $this->simpanDataTotalGabungan($year);
-            }
+            return view('ifcs.komposisi-segmen', [
+                'komposisi_segmen' => $komposisi_segmen,
+                'years' => $validYears,
+                'selectedYear' => $tahun 
+            ]);
         } catch (QueryException $e) {
             return redirect()->route('komposisi.index')->with('error', 'Terjadi error database: ' . $e->getMessage());
         }
-
-        $komposisi_segmen = komposisi_segmen::whereIn('tahun', $years)->get();
-
-        return view('ifcs.komposisi-segmen', [
-            'komposisi_segmen' => $komposisi_segmen,
-            'years' => $validYears,
-            'selectedYear' => $tahun 
-        ]);
     }
 
-    //Merak
+    // Merak
     public function simpanDataMerakIVA($tahun)
     {
         $ifcsIVA = pelabuhan_merak::where('golongan', 'IVA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
-        $redeemIVA = pelabuhan_merak::where('golongan', 'VIA')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $redeemIVA = pelabuhan_merak::where('golongan', 'IVA')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
         $totalIFCSRedeemIVA = $ifcsIVA + $redeemIVA;
         $nonifcsIVA = pelabuhan_merak::where('golongan', 'IVA')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
         $total = $totalIFCSRedeemIVA + $nonifcsIVA;
@@ -184,36 +146,21 @@ class komposisiSegmenController extends Controller
     }
     public function simpanDataTotalMerak($tahun)
     {
-        $redeem1 = komposisi_segmen::where('golongan', 'IVA')->where('jenis', 'merak')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem2 = komposisi_segmen::where('golongan', 'IVB')->where('jenis', 'merak')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem3 = komposisi_segmen::where('golongan', 'VA')->where('jenis', 'merak')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem4 = komposisi_segmen::where('golongan', 'VB')->where('jenis', 'merak')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem5 = komposisi_segmen::where('golongan', 'VIA')->where('jenis', 'merak')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem6 = komposisi_segmen::where('golongan', 'VIB')->where('jenis', 'merak')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem7 = komposisi_segmen::where('golongan', 'VII')->where('jenis', 'merak')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem8 = komposisi_segmen::where('golongan', 'VIII')->where('jenis', 'merak')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem9 = komposisi_segmen::where('golongan', 'IX')->where('jenis', 'merak')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $nonifcs1 = komposisi_segmen::where('golongan', 'IVA')->where('jenis', 'merak')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs2 = komposisi_segmen::where('golongan', 'IVB')->where('jenis', 'merak')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs3 = komposisi_segmen::where('golongan', 'VA')->where('jenis', 'merak')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs4 = komposisi_segmen::where('golongan', 'VB')->where('jenis', 'merak')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs5 = komposisi_segmen::where('golongan', 'VIA')->where('jenis', 'merak')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs6 = komposisi_segmen::where('golongan', 'VIB')->where('jenis', 'merak')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs7 = komposisi_segmen::where('golongan', 'VII')->where('jenis', 'merak')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs8 = komposisi_segmen::where('golongan', 'VIII')->where('jenis', 'merak')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs9 = komposisi_segmen::where('golongan', 'IX')->where('jenis', 'merak')->where('tahun', $tahun)->sum('nonifcs');
-        $totalifcs = $redeem1 + $redeem2 + $redeem3 + $redeem4 + $redeem5 + $redeem6 + $redeem7 + $redeem8 + $redeem9;
-        $totalnonifcs = $nonifcs1 + $nonifcs2 + $nonifcs3 + $nonifcs4 + $nonifcs5 + $nonifcs6 + $nonifcs7 + $nonifcs8 + $nonifcs9;
+        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+        $totalifcs = komposisi_segmen::whereIn('golongan', $golongans)->where('jenis', 'merak')->where('tahun', $tahun)->sum('ifcs_redeem');
+        $totalnonifcs = komposisi_segmen::whereIn('golongan', $golongans)->where('jenis', 'merak')->where('tahun', $tahun)->sum('nonifcs');
         $total = $totalifcs + $totalnonifcs ;
         komposisi_segmen::updateOrCreate(
             [ 'golongan' => 'Total', 'jenis' => 'merak','tahun' => $tahun],
             [ 'ifcs_redeem' => $totalifcs, 'nonifcs' => $totalnonifcs, 'total' => $total]
         );
     }  
+    
+    // Bakauheni
     public function simpanDataBakauheniIVA($tahun)
     {
         $ifcsIVA = pelabuhan_bakauheni::where('golongan', 'IVA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
-        $redeemIVA = pelabuhan_bakauheni::where('golongan', 'VIA')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $redeemIVA = pelabuhan_bakauheni::where('golongan', 'IVA')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
         $totalIFCSRedeemIVA = $ifcsIVA + $redeemIVA;
         $nonifcsIVA = pelabuhan_bakauheni::where('golongan', 'IVA')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
         $total = $totalIFCSRedeemIVA + $nonifcsIVA;
@@ -320,42 +267,27 @@ class komposisiSegmenController extends Controller
     }
     public function simpanDataTotalBakauheni($tahun)
     {
-        $redeem1 = komposisi_segmen::where('golongan', 'IVA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem2 = komposisi_segmen::where('golongan', 'IVB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem3 = komposisi_segmen::where('golongan', 'VA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem4 = komposisi_segmen::where('golongan', 'VB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem5 = komposisi_segmen::where('golongan', 'VIA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem6 = komposisi_segmen::where('golongan', 'VIB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem7 = komposisi_segmen::where('golongan', 'VII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem8 = komposisi_segmen::where('golongan', 'VIII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem9 = komposisi_segmen::where('golongan', 'IX')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $nonifcs1 = komposisi_segmen::where('golongan', 'IVA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs2 = komposisi_segmen::where('golongan', 'IVB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs3 = komposisi_segmen::where('golongan', 'VA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs4 = komposisi_segmen::where('golongan', 'VB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs5 = komposisi_segmen::where('golongan', 'VIA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs6 = komposisi_segmen::where('golongan', 'VIB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs7 = komposisi_segmen::where('golongan', 'VII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs8 = komposisi_segmen::where('golongan', 'VIII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs9 = komposisi_segmen::where('golongan', 'IX')->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('nonifcs');
-        $totalifcs = $redeem1 + $redeem2 + $redeem3 + $redeem4 + $redeem5 + $redeem6 + $redeem7 + $redeem8 + $redeem9;
-        $totalnonifcs = $nonifcs1 + $nonifcs2 + $nonifcs3 + $nonifcs4 + $nonifcs5 + $nonifcs6 + $nonifcs7 + $nonifcs8 + $nonifcs9;
+        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+        $totalifcs = komposisi_segmen::whereIn('golongan', $golongans)->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('ifcs_redeem');
+        $totalnonifcs = komposisi_segmen::whereIn('golongan', $golongans)->where('jenis', 'bakauheni')->where('tahun', $tahun)->sum('nonifcs');
         $total = $totalifcs + $totalnonifcs ;
         komposisi_segmen::updateOrCreate(
             [ 'golongan' => 'Total', 'jenis' => 'bakauheni','tahun' => $tahun],
             [ 'ifcs_redeem' => $totalifcs, 'nonifcs' => $totalnonifcs, 'total' => $total]
         );
     }  
+
+    // Gabungan
     public function simpanDataGabunganIVA($tahun)
     {
-        $IFCSmerakIVA = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'IVA')->where('jenis', 'merak')->where('tahun', $tahun)->first();
-        $IFCSbakauheniIVA = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'IVA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first();
-        $IFCSgabunganIVA = ($IFCSmerakIVA ? $IFCSmerakIVA->ifcs_redeem : 0) + 
-                           ($IFCSbakauheniIVA ? $IFCSbakauheniIVA->ifcs_redeem : 0);
-        $NONIFCSmerakIVA = komposisi_segmen::select('nonifcs')->where('golongan', 'IVA')->where('jenis', 'merak')->where('tahun', $tahun)->first();
-        $NONIFCSbakauheniIVA = komposisi_segmen::select('nonifcs')->where('golongan', 'IVA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first();
-        $NONIFCSgabunganIVA = ($NONIFCSmerakIVA ? $NONIFCSmerakIVA->nonifcs : 0) + 
-                              ($NONIFCSbakauheniIVA ? $NONIFCSbakauheniIVA->nonifcs : 0);
+        $IFCSmerakIVA = komposisi_segmen::where('golongan', 'IVA')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSbakauheniIVA = komposisi_segmen::where('golongan', 'IVA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSgabunganIVA = $IFCSmerakIVA + $IFCSbakauheniIVA;
+
+        $NONIFCSmerakIVA = komposisi_segmen::where('golongan', 'IVA')->where('jenis', 'merak')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSbakauheniIVA = komposisi_segmen::where('golongan', 'IVA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSgabunganIVA = $NONIFCSmerakIVA + $NONIFCSbakauheniIVA;
+        
         $total = $IFCSgabunganIVA + $NONIFCSgabunganIVA;
         komposisi_segmen::updateOrCreate(
             ['golongan' => 'IVA', 'jenis' => 'gabungan', 'tahun' => $tahun],
@@ -364,14 +296,14 @@ class komposisiSegmenController extends Controller
     }    
     public function simpanDataGabunganIVB($tahun)
     {
-        $IFCSmerakIVB = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'IVB')->where('jenis', 'merak')->where('tahun', $tahun)->first(); 
-        $IFCSbakauheniIVB = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'IVB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first();
-        $IFCSgabunganIVB = ($IFCSmerakIVB ? $IFCSmerakIVB->ifcs_redeem : 0) + 
-                           ($IFCSbakauheniIVB ? $IFCSbakauheniIVB->ifcs_redeem : 0);
-        $NONIFCSmerakIVB = komposisi_segmen::select('nonifcs')->where('golongan', 'IVB')->where('jenis', 'merak')->where('tahun', $tahun)->first();  
-        $NONIFCSbakauheniIVB = komposisi_segmen::select('nonifcs')->where('golongan', 'IVB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first(); 
-        $NONIFCSgabunganIVB = ($NONIFCSmerakIVB ? $NONIFCSmerakIVB->nonifcs : 0) + 
-                              ($NONIFCSbakauheniIVB ? $NONIFCSbakauheniIVB->nonifcs : 0);
+        $IFCSmerakIVB = komposisi_segmen::where('golongan', 'IVB')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSbakauheniIVB = komposisi_segmen::where('golongan', 'IVB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSgabunganIVB = $IFCSmerakIVB + $IFCSbakauheniIVB;
+
+        $NONIFCSmerakIVB = komposisi_segmen::where('golongan', 'IVB')->where('jenis', 'merak')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSbakauheniIVB = komposisi_segmen::where('golongan', 'IVB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSgabunganIVB = $NONIFCSmerakIVB + $NONIFCSbakauheniIVB;
+        
         $total = $IFCSgabunganIVB + $NONIFCSgabunganIVB;
         komposisi_segmen::updateOrCreate(
             ['golongan' => 'IVB', 'jenis' => 'gabungan', 'tahun' => $tahun],
@@ -380,14 +312,14 @@ class komposisiSegmenController extends Controller
     }
     public function simpanDataGabunganVA($tahun)
     {
-        $IFCSmerakVA = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VA')->where('jenis', 'merak')->where('tahun', $tahun)->first(); 
-        $IFCSbakauheniVA = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first();
-        $IFCSgabunganVA = ($IFCSmerakVA ? $IFCSmerakVA->ifcs_redeem : 0) + 
-                           ($IFCSbakauheniVA ? $IFCSbakauheniVA->ifcs_redeem : 0);
-        $NONIFCSmerakVA = komposisi_segmen::select('nonifcs')->where('golongan', 'VA')->where('jenis', 'merak')->where('tahun', $tahun)->first();  
-        $NONIFCSbakauheniVA = komposisi_segmen::select('nonifcs')->where('golongan', 'VA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first(); 
-        $NONIFCSgabunganVA = ($NONIFCSmerakVA ? $NONIFCSmerakVA->nonifcs : 0) + 
-                              ($NONIFCSbakauheniVA ? $NONIFCSbakauheniVA->nonifcs : 0);
+        $IFCSmerakVA = komposisi_segmen::where('golongan', 'VA')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSbakauheniVA = komposisi_segmen::where('golongan', 'VA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSgabunganVA = $IFCSmerakVA + $IFCSbakauheniVA;
+
+        $NONIFCSmerakVA = komposisi_segmen::where('golongan', 'VA')->where('jenis', 'merak')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSbakauheniVA = komposisi_segmen::where('golongan', 'VA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSgabunganVA = $NONIFCSmerakVA + $NONIFCSbakauheniVA;
+        
         $total = $IFCSgabunganVA + $NONIFCSgabunganVA;
         komposisi_segmen::updateOrCreate(
             ['golongan' => 'VA', 'jenis' => 'gabungan', 'tahun' => $tahun],
@@ -396,14 +328,14 @@ class komposisiSegmenController extends Controller
     }
     public function simpanDataGabunganVB($tahun)
     {
-        $IFCSmerakVB = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VB')->where('jenis', 'merak')->where('tahun', $tahun)->first(); 
-        $IFCSbakauheniVB = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first();
-        $IFCSgabunganVB = ($IFCSmerakVB ? $IFCSmerakVB->ifcs_redeem : 0) + 
-                           ($IFCSbakauheniVB ? $IFCSbakauheniVB->ifcs_redeem : 0);
-        $NONIFCSmerakVB = komposisi_segmen::select('nonifcs')->where('golongan', 'VB')->where('jenis', 'merak')->where('tahun', $tahun)->first();  
-        $NONIFCSbakauheniVB = komposisi_segmen::select('nonifcs')->where('golongan', 'VB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first(); 
-        $NONIFCSgabunganVB = ($NONIFCSmerakVB ? $NONIFCSmerakVB->nonifcs : 0) + 
-                              ($NONIFCSbakauheniVB ? $NONIFCSbakauheniVB->nonifcs : 0);
+        $IFCSmerakVB = komposisi_segmen::where('golongan', 'VB')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSbakauheniVB = komposisi_segmen::where('golongan', 'VB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSgabunganVB = $IFCSmerakVB + $IFCSbakauheniVB;
+
+        $NONIFCSmerakVB = komposisi_segmen::where('golongan', 'VB')->where('jenis', 'merak')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSbakauheniVB = komposisi_segmen::where('golongan', 'VB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSgabunganVB = $NONIFCSmerakVB + $NONIFCSbakauheniVB;
+        
         $total = $IFCSgabunganVB + $NONIFCSgabunganVB;
         komposisi_segmen::updateOrCreate(
             ['golongan' => 'VB', 'jenis' => 'gabungan', 'tahun' => $tahun],
@@ -412,14 +344,14 @@ class komposisiSegmenController extends Controller
     }
     public function simpanDataGabunganVIA($tahun)
     {
-        $IFCSmerakVIA = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VIA')->where('jenis', 'merak')->where('tahun', $tahun)->first(); 
-        $IFCSbakauheniVIA = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VIA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first();
-        $IFCSgabunganVIA = ($IFCSmerakVIA ? $IFCSmerakVIA->ifcs_redeem : 0) + 
-                           ($IFCSbakauheniVIA ? $IFCSbakauheniVIA->ifcs_redeem : 0);
-        $NONIFCSmerakVIA = komposisi_segmen::select('nonifcs')->where('golongan', 'VIA')->where('jenis', 'merak')->where('tahun', $tahun)->first();  
-        $NONIFCSbakauheniVIA = komposisi_segmen::select('nonifcs')->where('golongan', 'VIA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first(); 
-        $NONIFCSgabunganVIA = ($NONIFCSmerakVIA ? $NONIFCSmerakVIA->nonifcs : 0) + 
-                              ($NONIFCSbakauheniVIA ? $NONIFCSbakauheniVIA->nonifcs : 0);
+        $IFCSmerakVIA = komposisi_segmen::where('golongan', 'VIA')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSbakauheniVIA = komposisi_segmen::where('golongan', 'VIA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSgabunganVIA = $IFCSmerakVIA + $IFCSbakauheniVIA;
+
+        $NONIFCSmerakVIA = komposisi_segmen::where('golongan', 'VIA')->where('jenis', 'merak')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSbakauheniVIA = komposisi_segmen::where('golongan', 'VIA')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSgabunganVIA = $NONIFCSmerakVIA + $NONIFCSbakauheniVIA;
+        
         $total = $IFCSgabunganVIA + $NONIFCSgabunganVIA;
         komposisi_segmen::updateOrCreate(
             ['golongan' => 'VIA', 'jenis' => 'gabungan', 'tahun' => $tahun],
@@ -428,14 +360,14 @@ class komposisiSegmenController extends Controller
     }
     public function simpanDataGabunganVIB($tahun)
     {
-        $IFCSmerakVIB = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VIB')->where('jenis', 'merak')->where('tahun', $tahun)->first(); 
-        $IFCSbakauheniVIB = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VIB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first();
-        $IFCSgabunganVIB = ($IFCSmerakVIB ? $IFCSmerakVIB->ifcs_redeem : 0) + 
-                           ($IFCSbakauheniVIB ? $IFCSbakauheniVIB->ifcs_redeem : 0);
-        $NONIFCSmerakVIB = komposisi_segmen::select('nonifcs')->where('golongan', 'VIB')->where('jenis', 'merak')->where('tahun', $tahun)->first();  
-        $NONIFCSbakauheniVIB = komposisi_segmen::select('nonifcs')->where('golongan', 'VIB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first(); 
-        $NONIFCSgabunganVIB = ($NONIFCSmerakVIB ? $NONIFCSmerakVIB->nonifcs : 0) + 
-                              ($NONIFCSbakauheniVIB ? $NONIFCSbakauheniVIB->nonifcs : 0);
+        $IFCSmerakVIB = komposisi_segmen::where('golongan', 'VIB')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSbakauheniVIB = komposisi_segmen::where('golongan', 'VIB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSgabunganVIB = $IFCSmerakVIB + $IFCSbakauheniVIB;
+
+        $NONIFCSmerakVIB = komposisi_segmen::where('golongan', 'VIB')->where('jenis', 'merak')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSbakauheniVIB = komposisi_segmen::where('golongan', 'VIB')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSgabunganVIB = $NONIFCSmerakVIB + $NONIFCSbakauheniVIB;
+        
         $total = $IFCSgabunganVIB + $NONIFCSgabunganVIB;
         komposisi_segmen::updateOrCreate(
             ['golongan' => 'VIB', 'jenis' => 'gabungan', 'tahun' => $tahun],
@@ -444,14 +376,14 @@ class komposisiSegmenController extends Controller
     }
     public function simpanDataGabunganVII($tahun)
     {
-        $IFCSmerakVII = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VII')->where('jenis', 'merak')->where('tahun', $tahun)->first(); 
-        $IFCSbakauheniVII = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first();
-        $IFCSgabunganVII = ($IFCSmerakVII ? $IFCSmerakVII->ifcs_redeem : 0) + 
-                           ($IFCSbakauheniVII ? $IFCSbakauheniVII->ifcs_redeem : 0);
-        $NONIFCSmerakVII = komposisi_segmen::select('nonifcs')->where('golongan', 'VII')->where('jenis', 'merak')->where('tahun', $tahun)->first();  
-        $NONIFCSbakauheniVII = komposisi_segmen::select('nonifcs')->where('golongan', 'VII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first(); 
-        $NONIFCSgabunganVII = ($NONIFCSmerakVII ? $NONIFCSmerakVII->nonifcs : 0) + 
-                              ($NONIFCSbakauheniVII ? $NONIFCSbakauheniVII->nonifcs : 0);
+        $IFCSmerakVII = komposisi_segmen::where('golongan', 'VII')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSbakauheniVII = komposisi_segmen::where('golongan', 'VII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSgabunganVII = $IFCSmerakVII + $IFCSbakauheniVII;
+
+        $NONIFCSmerakVII = komposisi_segmen::where('golongan', 'VII')->where('jenis', 'merak')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSbakauheniVII = komposisi_segmen::where('golongan', 'VII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSgabunganVII = $NONIFCSmerakVII + $NONIFCSbakauheniVII;
+        
         $total = $IFCSgabunganVII + $NONIFCSgabunganVII;
         komposisi_segmen::updateOrCreate(
             ['golongan' => 'VII', 'jenis' => 'gabungan', 'tahun' => $tahun],
@@ -460,14 +392,14 @@ class komposisiSegmenController extends Controller
     }
     public function simpanDataGabunganVIII($tahun)
     {
-        $IFCSmerakVIII = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VIII')->where('jenis', 'merak')->where('tahun', $tahun)->first(); 
-        $IFCSbakauheniVIII = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'VIII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first();
-        $IFCSgabunganVIII = ($IFCSmerakVIII ? $IFCSmerakVIII->ifcs_redeem : 0) + 
-                           ($IFCSbakauheniVIII ? $IFCSbakauheniVIII->ifcs_redeem : 0);
-        $NONIFCSmerakVIII = komposisi_segmen::select('nonifcs')->where('golongan', 'VIII')->where('jenis', 'merak')->where('tahun', $tahun)->first();  
-        $NONIFCSbakauheniVIII = komposisi_segmen::select('nonifcs')->where('golongan', 'VIII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first(); 
-        $NONIFCSgabunganVIII = ($NONIFCSmerakVIII ? $NONIFCSmerakVIII->nonifcs : 0) + 
-                              ($NONIFCSbakauheniVIII ? $NONIFCSbakauheniVIII->nonifcs : 0);
+        $IFCSmerakVIII = komposisi_segmen::where('golongan', 'VIII')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSbakauheniVIII = komposisi_segmen::where('golongan', 'VIII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSgabunganVIII = $IFCSmerakVIII + $IFCSbakauheniVIII;
+
+        $NONIFCSmerakVIII = komposisi_segmen::where('golongan', 'VIII')->where('jenis', 'merak')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSbakauheniVIII = komposisi_segmen::where('golongan', 'VIII')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSgabunganVIII = $NONIFCSmerakVIII + $NONIFCSbakauheniVIII;
+        
         $total = $IFCSgabunganVIII + $NONIFCSgabunganVIII;
         komposisi_segmen::updateOrCreate(
             ['golongan' => 'VIII', 'jenis' => 'gabungan', 'tahun' => $tahun],
@@ -476,14 +408,14 @@ class komposisiSegmenController extends Controller
     }
     public function simpanDataGabunganIX($tahun)
     {
-        $IFCSmerakIX = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'IX')->where('jenis', 'merak')->where('tahun', $tahun)->first(); 
-        $IFCSbakauheniIX = komposisi_segmen::select('ifcs_redeem')->where('golongan', 'IX')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first();
-        $IFCSgabunganIX = ($IFCSmerakIX ? $IFCSmerakIX->ifcs_redeem : 0) + 
-                           ($IFCSbakauheniIX ? $IFCSbakauheniIX->ifcs_redeem : 0);
-        $NONIFCSmerakIX = komposisi_segmen::select('nonifcs')->where('golongan', 'IX')->where('jenis', 'merak')->where('tahun', $tahun)->first();  
-        $NONIFCSbakauheniIX = komposisi_segmen::select('nonifcs')->where('golongan', 'IX')->where('jenis', 'bakauheni')->where('tahun', $tahun)->first(); 
-        $NONIFCSgabunganIX = ($NONIFCSmerakIX ? $NONIFCSmerakIX->nonifcs : 0) + 
-                              ($NONIFCSbakauheniIX ? $NONIFCSbakauheniIX->nonifcs : 0);
+        $IFCSmerakIX = komposisi_segmen::where('golongan', 'IX')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSbakauheniIX = komposisi_segmen::where('golongan', 'IX')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('ifcs_redeem') ?? 0;
+        $IFCSgabunganIX = $IFCSmerakIX + $IFCSbakauheniIX;
+
+        $NONIFCSmerakIX = komposisi_segmen::where('golongan', 'IX')->where('jenis', 'merak')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSbakauheniIX = komposisi_segmen::where('golongan', 'IX')->where('jenis', 'bakauheni')->where('tahun', $tahun)->value('nonifcs') ?? 0;
+        $NONIFCSgabunganIX = $NONIFCSmerakIX + $NONIFCSbakauheniIX;
+        
         $total = $IFCSgabunganIX + $NONIFCSgabunganIX;
         komposisi_segmen::updateOrCreate(
             ['golongan' => 'IX', 'jenis' => 'gabungan', 'tahun' => $tahun],
@@ -492,30 +424,53 @@ class komposisiSegmenController extends Controller
     }
     public function simpanDataTotalGabungan($tahun)
     {
-        $redeem1 = komposisi_segmen::where('golongan', 'IVA')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem2 = komposisi_segmen::where('golongan', 'IVB')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem3 = komposisi_segmen::where('golongan', 'VA')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem4 = komposisi_segmen::where('golongan', 'VB')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem5 = komposisi_segmen::where('golongan', 'VIA')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem6 = komposisi_segmen::where('golongan', 'VIB')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem7 = komposisi_segmen::where('golongan', 'VII')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem8 = komposisi_segmen::where('golongan', 'VIII')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $redeem9 = komposisi_segmen::where('golongan', 'IX')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('ifcs_Redeem');
-        $nonifcs1 = komposisi_segmen::where('golongan', 'IVA')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs2 = komposisi_segmen::where('golongan', 'IVB')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs3 = komposisi_segmen::where('golongan', 'VA')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs4 = komposisi_segmen::where('golongan', 'VB')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs5 = komposisi_segmen::where('golongan', 'VIA')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs6 = komposisi_segmen::where('golongan', 'VIB')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs7 = komposisi_segmen::where('golongan', 'VII')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs8 = komposisi_segmen::where('golongan', 'VIII')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('nonifcs');
-        $nonifcs9 = komposisi_segmen::where('golongan', 'IX')->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('nonifcs');
-        $totalifcs = $redeem1 + $redeem2 + $redeem3 + $redeem4 + $redeem5 + $redeem6 + $redeem7 + $redeem8 + $redeem9;
-        $totalnonifcs = $nonifcs1 + $nonifcs2 + $nonifcs3 + $nonifcs4 + $nonifcs5 + $nonifcs6 + $nonifcs7 + $nonifcs8 + $nonifcs9;
+        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+        $totalifcs = komposisi_segmen::whereIn('golongan', $golongans)->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('ifcs_redeem');
+        $totalnonifcs = komposisi_segmen::whereIn('golongan', $golongans)->where('jenis', 'gabungan')->where('tahun', $tahun)->sum('nonifcs');
         $total = $totalifcs + $totalnonifcs ;
         komposisi_segmen::updateOrCreate(
             [ 'golongan' => 'Total', 'jenis' => 'gabungan','tahun' => $tahun],
             [ 'ifcs_redeem' => $totalifcs, 'nonifcs' => $totalnonifcs, 'total' => $total]
         );
     }  
+
+    // Fungsi untuk memicu semua perhitungan secara manual
+    public function runCalculationsForYear($tahun)
+    {
+        // Merak
+        $this->simpanDataMerakIVA($tahun);
+        $this->simpanDataMerakIVB($tahun);
+        $this->simpanDataMerakVA($tahun);
+        $this->simpanDataMerakVB($tahun);
+        $this->simpanDataMerakVIA($tahun);
+        $this->simpanDataMerakVIB($tahun);
+        $this->simpanDataMerakVII($tahun);
+        $this->simpanDataMerakVIII($tahun);
+        $this->simpanDataMerakIX($tahun);
+        $this->simpanDataTotalMerak($tahun);
+
+        // Bakauheni
+        $this->simpanDataBakauheniIVA($tahun);
+        $this->simpanDataBakauheniIVB($tahun);
+        $this->simpanDataBakauheniVA($tahun);
+        $this->simpanDataBakauheniVB($tahun);
+        $this->simpanDataBakauheniVIA($tahun);
+        $this->simpanDataBakauheniVIB($tahun);
+        $this->simpanDataBakauheniVII($tahun);
+        $this->simpanDataBakauheniVIII($tahun);
+        $this->simpanDataBakauheniIX($tahun);
+        $this->simpanDataTotalBakauheni($tahun);
+
+        // Gabungan
+        $this->simpanDataGabunganIVA($tahun);
+        $this->simpanDataGabunganIVB($tahun);
+        $this->simpanDataGabunganVA($tahun);
+        $this->simpanDataGabunganVB($tahun);
+        $this->simpanDataGabunganVIA($tahun);
+        $this->simpanDataGabunganVIB($tahun);
+        $this->simpanDataGabunganVII($tahun);
+        $this->simpanDataGabunganVIII($tahun);
+        $this->simpanDataGabunganIX($tahun);
+        $this->simpanDataTotalGabungan($tahun);
+    }
 }

@@ -26,22 +26,6 @@
                                 </div>
                             </form>
                         </div>
-
-                        <script>
-                            document.addEventListener("DOMContentLoaded", function () {
-                                var selectedYear = "{{ request()->get('tahun') }}";
-
-                                var tahunDropdown = document.getElementById("tahunDropdown");
-
-                                for (var i = 0; i < tahunDropdown.options.length; i++) {
-                                    if (tahunDropdown.options[i].value == selectedYear) {
-                                        tahunDropdown.selectedIndex = i;
-                                        break;
-                                    }
-                                }
-                            });
-
-                        </script>
                     </div>
 
                     <ul class="nav nav-tabs" id="tabMenu1">
@@ -80,7 +64,7 @@
                                             class="text-center text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Total
                                         </th>
-                                        </tr>
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($komposisi_segmen as $data)
@@ -110,7 +94,7 @@
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
                                                 {{ number_format($data->total, 0, ',', '.') }}</p>
                                         </td>
-                                        </tr>
+                                    </tr>
                                     @endif
                                     @endforeach
                                 </tbody>
@@ -136,7 +120,7 @@
                                             class="text-center text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Total
                                         </th>
-                                        </tr>
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($komposisi_segmen as $data)
@@ -166,7 +150,7 @@
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
                                                 {{ number_format($data->total, 0, ',', '.') }}</p>
                                         </td>
-                                        </tr>
+                                    </tr>
                                     @endif
                                     @endforeach
                                 </tbody>
@@ -192,7 +176,7 @@
                                             class="text-center text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Total
                                         </th>
-                                        </tr>
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($komposisi_segmen as $data)
@@ -222,7 +206,7 @@
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
                                                 {{ number_format($data->total, 0, ',', '.') }}</p>
                                         </td>
-                                        </tr>
+                                    </tr>
                                     @endif
                                     @endforeach
                                 </tbody>
@@ -233,41 +217,31 @@
                     <script>
                         document.addEventListener('DOMContentLoaded', function () {
                             var activeTab1 = localStorage.getItem('activeTab1');
-                            if (activeTab1) {
-                                var activeElement1 = document.querySelector('[href="' + activeTab1 + '"]');
-                                if (activeElement1) {
-                                    activateTab(activeElement1, new Event('click'), 'tab1');
-                                }
+                            if (!activeTab1) {
+                                activeTab1 = '#MERAK';
+                                localStorage.setItem('activeTab1', activeTab1);
+                            }
+                            var activeElement1 = document.querySelector('[href="' + activeTab1 + '"]');
+                            if (activeElement1) {
+                                activateTab(activeElement1, new Event('click'), 'tab1');
                             }
                         });
 
                         function activateTab(clickedElement, event, tabGroup) {
                             event.preventDefault();
-
                             var tabGroupId = clickedElement.closest('.nav-tabs').id;
-
                             document.querySelectorAll('#' + tabGroupId + ' .nav-link').forEach(function (element) {
                                 element.classList.remove('active');
                             });
-
                             clickedElement.classList.add('active');
-
                             var targetTabId = clickedElement.getAttribute('href');
-
-                            document.querySelectorAll('.tab-content').forEach(function (content) {
-                                if (content.parentNode.querySelector('.nav-tabs').id === tabGroupId) {
-                                    content.querySelectorAll('.tab-pane').forEach(function (tab) {
-                                        tab.classList.remove('show', 'active');
-                                    });
-                                }
+                            document.querySelectorAll('.tab-content .tab-pane').forEach(function (tab) {
+                                tab.classList.remove('show', 'active');
                             });
-
                             document.querySelector(targetTabId).classList.add('show', 'active');
-
                             localStorage.setItem('activeTab' + tabGroup.trim().charAt(tabGroup.trim().length - 1),
                                 targetTabId);
                         }
-
                     </script>
                 </div>
             </div>
