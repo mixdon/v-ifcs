@@ -9,7 +9,6 @@ use App\Http\Controllers\Controller;
 use League\Csv\Reader;
 use League\Csv\Statement;
 use App\Services\DataWarehouseService;
-use App\Services\DataCalculationService;
 
 class pelabuhanBakauheniController extends Controller
 {
@@ -23,8 +22,10 @@ class pelabuhanBakauheniController extends Controller
         $selectedTab = $request->input('tab', 'IFCS');
 
         if ($tahun && in_array($tahun, $validYears)) {
-            $dataCalculationService = new DataCalculationService();
-            $dataCalculationService->calculateAllForYear($tahun);
+            $this->simpanDataTotalIFCS($tahun);
+            $this->simpanDataTotalREDEEM($tahun);
+            $this->simpanDataTotalNONIFCS($tahun);
+            $this->simpanDataTotalREGULER($tahun);
             $years = [$tahun];
         } else {
             $years = $validYears;
@@ -54,10 +55,12 @@ class pelabuhanBakauheniController extends Controller
             $etlService = new DataWarehouseService();
             $etlService->runEtlForYear($targetYear);
 
-            $dataCalculationService = new DataCalculationService();
-            $dataCalculationService->calculateAllForYear($targetYear);
+            $this->simpanDataTotalIFCS($targetYear);
+            $this->simpanDataTotalREDEEM($targetYear);
+            $this->simpanDataTotalNONIFCS($targetYear);
+            $this->simpanDataTotalREGULER($targetYear);
 
-            return redirect()->back()->with('etl_bakauheni_sukses', "Proses ETL dan perhitungan data untuk tahun {$targetYear} berhasil dijalankan.");
+            return redirect()->back()->with('etl_bakauheni_sukses', "Proses ETL untuk tahun {$targetYear} berhasil dijalankan.");
         } catch (\Exception $e) {
             return redirect()->back()->with('etl_bakauheni_gagal', "Terjadi kesalahan saat menjalankan ETL: " . $e->getMessage());
         }
@@ -90,18 +93,35 @@ class pelabuhanBakauheniController extends Controller
         ]);
     
         $record = pelabuhan_bakauheni::findOrFail($id);
-        $record->update($validatedData);
-    
-        $tahunRedirect = $record->tahun; 
-        $jenisRedirect = strtoupper($record->jenis);
+        if ($record->update($validatedData)) {
+            // Panggil metode untuk menghitung ulang total pada model
+            $record->calculateAndSaveTotal();
 
-        $dataCalculationService = new DataCalculationService();
-        $dataCalculationService->calculateAllForYear($tahunRedirect);
+            $tahunRedirect = $record->tahun; 
+            $jenisRedirect = strtoupper($record->jenis);
 
-        return redirect()->route('pelabuhan.bakauheni.index', [
-            'tahun' => $tahunRedirect,
-            'tab' => $jenisRedirect
-        ])->with('update_bakauheni_success', 'Data berhasil diperbarui.');
+            switch (strtolower($record->jenis)) {
+                case 'ifcs':
+                    $this->simpanDataTotalIFCS($record->tahun);
+                    break;
+                case 'redeem':
+                    $this->simpanDataTotalREDEEM($record->tahun);
+                    break;
+                case 'nonifcs':
+                    $this->simpanDataTotalNONIFCS($record->tahun);
+                    break;
+                case 'reguler':
+                    $this->simpanDataTotalREGULER($record->tahun);
+                    break;
+            }
+
+            return redirect()->route('pelabuhan.bakauheni.index', [
+                'tahun' => $tahunRedirect,
+                'tab' => $jenisRedirect
+            ])->with('update_bakauheni_success', 'Data berhasil diperbarui.');
+        } else {
+             return redirect()->back()->with('update_bakauheni_gagal', 'Gagal memperbarui data.');
+        }
     }
 
     public function uploadcsvPelabuhanBakauheni(Request $request)
@@ -121,7 +141,7 @@ class pelabuhanBakauheniController extends Controller
             
             $uploadedYears = [];
             foreach ($records as $record) {
-                pelabuhan_bakauheni::updateOrCreate(
+                $data = pelabuhan_bakauheni::updateOrCreate(
                     ['tahun' => $record['tahun'], 'golongan' => $record['golongan'], 'jenis' => $record['jenis']],
                     [
                         'januari' => $record['januari'],
@@ -138,13 +158,17 @@ class pelabuhanBakauheniController extends Controller
                         'desember' => $record['desember'],
                     ]
                 );
+                // Panggil metode untuk menghitung ulang total pada model
+                $data->calculateAndSaveTotal();
                 $uploadedYears[] = $record['tahun'];
             }
 
             $uniqueUploadedYears = array_unique($uploadedYears);
             foreach ($uniqueUploadedYears as $tahun) {
-                $dataCalculationService = new DataCalculationService();
-                $dataCalculationService->calculateAllForYear($tahun);
+                $this->simpanDataTotalIFCS($tahun);
+                $this->simpanDataTotalREDEEM($tahun);
+                $this->simpanDataTotalNONIFCS($tahun);
+                $this->simpanDataTotalREGULER($tahun);
             }
         
             return redirect()->back()->with('upload_bakauheni_berhasil', 'File CSV berhasil diupload');
@@ -152,6 +176,126 @@ class pelabuhanBakauheniController extends Controller
             return redirect()->back()->with('upload_bakauheni_gagal', 'Terjadi kesalahan saat mengupload file CSV: ' . $e->getMessage());
         }
     } 
+
+    public function simpanDataTotalIFCS($tahun)
+    {
+        if (!$tahun) {
+            return;
+        }
+
+        $months = [
+            'januari', 'februari', 'maret', 'april', 'mei', 
+            'juni', 'juli', 'agustus', 'september', 'oktober', 
+            'november', 'desember'
+        ];
+
+        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+
+        $totals = [];
+        foreach ($months as $month) {
+            $totals[$month] = pelabuhan_bakauheni::where('tahun', $tahun)
+                ->where('jenis', 'ifcs')    
+                ->whereIn('golongan', $golongans)
+                ->sum($month);
+        }
+
+        $totalIfcs = array_sum($totals);
+
+        pelabuhan_bakauheni::updateOrCreate(
+            ['golongan' => 'Total', 'jenis'=>'ifcs', 'tahun' => $tahun],
+            array_merge($totals, ['total' => $totalIfcs])
+        );
+    }
+
+    public function simpanDataTotalREDEEM($tahun)
+    {
+        if (!$tahun) {
+            return;
+        }
+
+        $months = [
+            'januari', 'februari', 'maret', 'april', 'mei', 
+            'juni', 'juli', 'agustus', 'september', 'oktober', 
+            'november', 'desember'
+        ];
+
+        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+
+        $totals = [];
+        foreach ($months as $month) {
+            $totals[$month] = pelabuhan_bakauheni::where('tahun', $tahun)
+                ->where('jenis', 'redeem')    
+                ->whereIn('golongan', $golongans)
+                ->sum($month);
+        }
+
+        $totalredeem = array_sum($totals);
+
+        pelabuhan_bakauheni::updateOrCreate(
+            ['golongan' => 'Total', 'jenis'=>'redeem', 'tahun' => $tahun],
+            array_merge($totals, ['total' => $totalredeem])
+        );
+    }
+
+    public function simpanDataTotalNONIFCS($tahun)
+    {
+        if (!$tahun) {
+            return;
+        }
+
+        $months = [
+            'januari', 'februari', 'maret', 'april', 'mei', 
+            'juni', 'juli', 'agustus', 'september', 'oktober', 
+            'november', 'desember'
+        ];
+
+        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+
+        $totals = [];
+        foreach ($months as $month) {
+            $totals[$month] = pelabuhan_bakauheni::where('tahun', $tahun)
+                ->where('jenis', 'nonifcs')    
+                ->whereIn('golongan', $golongans)
+                ->sum($month);
+        }
+
+        $totalnonifcs = array_sum($totals);
+
+        pelabuhan_bakauheni::updateOrCreate(
+            ['golongan' => 'Total', 'jenis'=>'nonifcs', 'tahun' => $tahun],
+            array_merge($totals, ['total' => $totalnonifcs])
+        );
+    }
+
+    public function simpanDataTotalREGULER($tahun)
+    {
+        if (!$tahun) {
+            return;
+        }
+
+        $months = [
+            'januari', 'februari', 'maret', 'april', 'mei', 
+            'juni', 'juli', 'agustus', 'september', 'oktober', 
+            'november', 'desember'
+        ];
+
+        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+
+        $totals = [];
+        foreach ($months as $month) {
+            $totals[$month] = pelabuhan_bakauheni::where('tahun', $tahun)
+                ->where('jenis', 'reguler')    
+                ->whereIn('golongan', $golongans)
+                ->sum($month);
+        }
+
+        $totalreguler = array_sum($totals);
+
+        pelabuhan_bakauheni::updateOrCreate(
+            ['golongan' => 'Total', 'jenis'=>'reguler', 'tahun' => $tahun],
+            array_merge($totals, ['total' => $totalreguler])
+        );
+    }
 
     public function delete(Request $request, $id)
     {
@@ -161,8 +305,20 @@ class pelabuhanBakauheniController extends Controller
             $jenisAffected = $record->jenis;
 
             if ($record->delete()) {
-                $dataCalculationService = new DataCalculationService();
-                $dataCalculationService->calculateAllForYear($tahunAffected);
+                switch (strtolower($jenisAffected)) {
+                    case 'ifcs':
+                        $this->simpanDataTotalIFCS($tahunAffected);
+                        break;
+                    case 'redeem':
+                        $this->simpanDataTotalREDEEM($tahunAffected);
+                        break;
+                    case 'nonifcs':
+                        $this->simpanDataTotalNONIFCS($tahunAffected);
+                        break;
+                    case 'reguler':
+                        $this->simpanDataTotalREGULER($tahunAffected);
+                        break;
+                }
                 
                 return redirect()->route('pelabuhan.bakauheni.index', [
                     'tahun' => $tahunAffected,

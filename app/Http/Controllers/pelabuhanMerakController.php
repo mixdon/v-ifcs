@@ -9,7 +9,6 @@ use App\Http\Controllers\Controller;
 use League\Csv\Reader;
 use League\Csv\Statement;
 use App\Services\DataWarehouseService;
-use App\Services\DataCalculationService;
 
 class pelabuhanMerakController extends Controller
 {
@@ -20,11 +19,13 @@ class pelabuhanMerakController extends Controller
         $validYears = range($startYear, $currentYear);
     
         $tahun = $request->input('tahun', null);
-        $selectedTab = $request->input('tab', 'IFCS'); 
+        $selectedTab = $request->input('tab', 'IFCS');
     
         if ($tahun && in_array($tahun, $validYears)) {
-            $dataCalculationService = new DataCalculationService();
-            $dataCalculationService->calculateAllForYear($tahun);
+            $this->simpanDataTotalIFCS($tahun);
+            $this->simpanDataTotalREDEEM($tahun);
+            $this->simpanDataTotalNONIFCS($tahun);
+            $this->simpanDataTotalREGULER($tahun);
             $years = [$tahun];
         } else {
             $years = $validYears;
@@ -54,10 +55,12 @@ class pelabuhanMerakController extends Controller
             $etlService = new DataWarehouseService();
             $etlService->runEtlForYear($targetYear);
             
-            $dataCalculationService = new DataCalculationService();
-            $dataCalculationService->calculateAllForYear($targetYear);
+            $this->simpanDataTotalIFCS($targetYear);
+            $this->simpanDataTotalREDEEM($targetYear);
+            $this->simpanDataTotalNONIFCS($targetYear);
+            $this->simpanDataTotalREGULER($targetYear);
 
-            return redirect()->back()->with('etl_merak_sukses', "Proses ETL dan perhitungan data untuk tahun {$targetYear} berhasil dijalankan.");
+            return redirect()->back()->with('etl_merak_sukses', "Proses ETL untuk tahun {$targetYear} berhasil dijalankan.");
         } catch (\Exception $e) {
             return redirect()->back()->with('etl_merak_gagal', "Terjadi kesalahan saat menjalankan ETL: " . $e->getMessage());
         }
@@ -92,11 +95,26 @@ class pelabuhanMerakController extends Controller
         $record = pelabuhan_merak::findOrFail($id);
         
         if ($record->update($validatedData)) {
+            // Panggil metode untuk menghitung ulang total pada model
+            $record->calculateAndSaveTotal();
+
             $tahunRedirect = $record->tahun; 
             $jenisRedirect = strtoupper($record->jenis);
 
-            $dataCalculationService = new DataCalculationService();
-            $dataCalculationService->calculateAllForYear($tahunRedirect);
+            switch (strtolower($record->jenis)) {
+                case 'ifcs':
+                    $this->simpanDataTotalIFCS($record->tahun);
+                    break;
+                case 'redeem':
+                    $this->simpanDataTotalREDEEM($record->tahun);
+                    break;
+                case 'nonifcs':
+                    $this->simpanDataTotalNONIFCS($record->tahun);
+                    break;
+                case 'reguler':
+                    $this->simpanDataTotalREGULER($record->tahun);
+                    break;
+            }
 
             return redirect()->route('pelabuhan.merak.index', [
                 'tahun' => $tahunRedirect,
@@ -124,7 +142,7 @@ class pelabuhanMerakController extends Controller
             
             $uploadedYears = [];
             foreach ($records as $record) {
-                pelabuhan_merak::updateOrCreate(
+                $data = pelabuhan_merak::updateOrCreate(
                     ['tahun' => $record['tahun'], 'golongan' => $record['golongan'], 'jenis' => $record['jenis']],
                     [
                         'januari' => $record['januari'],
@@ -141,13 +159,17 @@ class pelabuhanMerakController extends Controller
                         'desember' => $record['desember'],
                     ]
                 );
+                // Panggil metode untuk menghitung ulang total pada model
+                $data->calculateAndSaveTotal();
                 $uploadedYears[] = $record['tahun'];
             }
 
             $uniqueUploadedYears = array_unique($uploadedYears);
             foreach ($uniqueUploadedYears as $tahun) {
-                $dataCalculationService = new DataCalculationService();
-                $dataCalculationService->calculateAllForYear($tahun);
+                $this->simpanDataTotalIFCS($tahun);
+                $this->simpanDataTotalREDEEM($tahun);
+                $this->simpanDataTotalNONIFCS($tahun);
+                $this->simpanDataTotalREGULER($tahun);
             }
         
             return redirect()->back()->with('upload_merak_success', 'File CSV berhasil diupload');
@@ -155,6 +177,126 @@ class pelabuhanMerakController extends Controller
             return redirect()->back()->with('upload_merak_fail', 'Terjadi kesalahan saat mengupload file CSV: ' . $e->getMessage());
         }
     } 
+
+    public function simpanDataTotalIFCS($tahun)
+    {
+        if (!$tahun) {
+            return;
+        }
+
+        $months = [
+            'januari', 'februari', 'maret', 'april', 'mei', 
+            'juni', 'juli', 'agustus', 'september', 'oktober', 
+            'november', 'desember'
+        ];
+
+        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+
+        $totals = [];
+        foreach ($months as $month) {
+            $totals[$month] = pelabuhan_merak::where('tahun', $tahun)
+                ->where('jenis', 'ifcs')    
+                ->whereIn('golongan', $golongans)
+                ->sum($month);
+        }
+
+        $totalIfcs = array_sum($totals);
+
+        pelabuhan_merak::updateOrCreate(
+            ['golongan' => 'Total', 'jenis'=>'ifcs', 'tahun' => $tahun],
+            array_merge($totals, ['total' => $totalIfcs])
+        );
+    }
+
+    public function simpanDataTotalREDEEM($tahun)
+    {
+        if (!$tahun) {
+            return;
+        }
+
+        $months = [
+            'januari', 'februari', 'maret', 'april', 'mei', 
+            'juni', 'juli', 'agustus', 'september', 'oktober', 
+            'november', 'desember'
+        ];
+
+        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+
+        $totals = [];
+        foreach ($months as $month) {
+            $totals[$month] = pelabuhan_merak::where('tahun', $tahun)
+                ->where('jenis', 'redeem')    
+                ->whereIn('golongan', $golongans)
+                ->sum($month);
+        }
+
+        $totalredeem = array_sum($totals);
+
+        pelabuhan_merak::updateOrCreate(
+            ['golongan' => 'Total', 'jenis'=>'redeem', 'tahun' => $tahun],
+            array_merge($totals, ['total' => $totalredeem])
+        );
+    }
+
+    public function simpanDataTotalNONIFCS($tahun)
+    {
+        if (!$tahun) {
+            return;
+        }
+
+        $months = [
+            'januari', 'februari', 'maret', 'april', 'mei', 
+            'juni', 'juli', 'agustus', 'september', 'oktober', 
+            'november', 'desember'
+        ];
+
+        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+
+        $totals = [];
+        foreach ($months as $month) {
+            $totals[$month] = pelabuhan_merak::where('tahun', $tahun)
+                ->where('jenis', 'nonifcs')    
+                ->whereIn('golongan', $golongans)
+                ->sum($month);
+        }
+
+        $totalnonifcs = array_sum($totals);
+
+        pelabuhan_merak::updateOrCreate(
+            ['golongan' => 'Total', 'jenis'=>'nonifcs', 'tahun' => $tahun],
+            array_merge($totals, ['total' => $totalnonifcs])
+        );
+    }
+
+    public function simpanDataTotalREGULER($tahun)
+    {
+        if (!$tahun) {
+            return;
+        }
+
+        $months = [
+            'januari', 'februari', 'maret', 'april', 'mei', 
+            'juni', 'juli', 'agustus', 'september', 'oktober', 
+            'november', 'desember'
+        ];
+
+        $golongans = ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'];
+
+        $totals = [];
+        foreach ($months as $month) {
+            $totals[$month] = pelabuhan_merak::where('tahun', $tahun)
+                ->where('jenis', 'reguler')    
+                ->whereIn('golongan', $golongans)
+                ->sum($month);
+        }
+
+        $totalreguler = array_sum($totals);
+
+        pelabuhan_merak::updateOrCreate(
+            ['golongan' => 'Total', 'jenis'=>'reguler', 'tahun' => $tahun],
+            array_merge($totals, ['total' => $totalreguler])
+        );
+    }
 
     public function delete(Request $request, $id)
     {
@@ -164,8 +306,20 @@ class pelabuhanMerakController extends Controller
             $jenisAffected = $record->jenis;
 
             if ($record->delete()) {
-                $dataCalculationService = new DataCalculationService();
-                $dataCalculationService->calculateAllForYear($tahunAffected);
+                switch (strtolower($jenisAffected)) {
+                    case 'ifcs':
+                        $this->simpanDataTotalIFCS($tahunAffected);
+                        break;
+                    case 'redeem':
+                        $this->simpanDataTotalREDEEM($tahunAffected);
+                        break;
+                    case 'nonifcs':
+                        $this->simpanDataTotalNONIFCS($tahunAffected);
+                        break;
+                    case 'reguler':
+                        $this->simpanDataTotalREGULER($tahunAffected);
+                        break;
+                }
                 
                 return redirect()->route('pelabuhan.merak.index', [
                     'tahun' => $tahunAffected,

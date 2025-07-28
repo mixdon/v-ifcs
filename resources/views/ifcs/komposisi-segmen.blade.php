@@ -61,6 +61,7 @@
 
                     <div class="tab-content" style="overflow-x: auto;">
                         <div id="MERAK" class="tab-pane fade show active">
+                            <!-- Tabel MERAK -->
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -80,7 +81,11 @@
                                             class="text-center text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Total
                                         </th>
-                                        </tr>
+                                        <!-- <th
+                                            class="text-center text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
+                                            Action
+                                        </th> -->
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($komposisi_segmen as $data)
@@ -110,13 +115,26 @@
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
                                                 {{ number_format($data->total, 0, ',', '.') }}</p>
                                         </td>
-                                        </tr>
+                                        <!-- <td class="text-center">
+                                            <form id="form-delete-{{ $data->id }}"
+                                                action="{{ route('kinerja-ifcs.delete', $data->id) }}" method="POST">
+                                                @csrf @method('DELETE')
+                                                <button type="button" class="mx-2 my-1 btn-delete"
+                                                    style="background-color: transparent; border: none; padding: 0;"
+                                                    data-id="{{ $data->id }}" data-bs-toggle="tooltip"
+                                                    data-bs-original-title="Hapus Data">
+                                                    <i class="cursor-pointer fas fa-trash text-danger fa-sm"></i>
+                                                </button>
+                                            </form>
+                                        </td> -->
+                                    </tr>
                                     @endif
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
                         <div id="BAKAUHENI" class="tab-pane fade">
+                            <!-- Tabel BAKAUHENI -->
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -136,7 +154,11 @@
                                             class="text-center text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Total
                                         </th>
-                                        </tr>
+                                        <!-- <th
+                                                class="text-center text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                                Action
+                                            </th> -->
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($komposisi_segmen as $data)
@@ -166,13 +188,27 @@
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
                                                 {{ number_format($data->total, 0, ',', '.') }}</p>
                                         </td>
-                                        </tr>
+                                        <!-- <td class="text-center">
+                                                <form id="form-delete-{{ $data->id }}"
+                                                    action="{{ route('kinerja-ifcs.delete', $data->id) }}"
+                                                    method="POST">
+                                                    @csrf @method('DELETE')
+                                                    <button type="button" class="mx-2 my-1 btn-delete"
+                                                        style="background-color: transparent; border: none; padding: 0;"
+                                                        data-id="{{ $data->id }}" data-bs-toggle="tooltip"
+                                                        data-bs-original-title="Hapus Data">
+                                                        <i class="cursor-pointer fas fa-trash text-danger fa-sm"></i>
+                                                    </button>
+                                                </form>
+                                            </td> -->
+                                    </tr>
                                     @endif
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
                         <div id="GABUNGAN" class="tab-pane fade">
+                            <!-- Tabel GABUNGAN -->
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -192,7 +228,11 @@
                                             class="text-center text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Total
                                         </th>
-                                        </tr>
+                                        <!-- <th
+                                                class="text-center text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
+                                                Action
+                                            </th> -->
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($komposisi_segmen as $data)
@@ -222,7 +262,19 @@
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
                                                 {{ number_format($data->total, 0, ',', '.') }}</p>
                                         </td>
-                                        </tr>
+                                        <!-- <td class="text-center">
+                                            <form id="form-delete-{{ $data->id }}"
+                                                action="{{ route('kinerja-ifcs.delete', $data->id) }}" method="POST">
+                                                @csrf @method('DELETE')
+                                                <button type="button" class="mx-2 my-1 btn-delete"
+                                                    style="background-color: transparent; border: none; padding: 0;"
+                                                    data-id="{{ $data->id }}" data-bs-toggle="tooltip"
+                                                    data-bs-original-title="Hapus Data">
+                                                    <i class="cursor-pointer fas fa-trash text-danger fa-sm"></i>
+                                                </button>
+                                            </form>
+                                        </td> -->
+                                    </tr>
                                     @endif
                                     @endforeach
                                 </tbody>

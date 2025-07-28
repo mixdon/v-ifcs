@@ -56,6 +56,7 @@
 
                     <div class="tab-content" style="overflow-x: auto;">
                         <div id="IFCS" class="tab-pane fade show active">
+                            <!-- Tabel IFCS -->
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -75,7 +76,11 @@
                                             class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Gabungan
                                         </th>
-                                        </tr>
+                                        <!-- <th
+                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                            Action
+                                        </th> -->
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($market_lintasan as $data)
@@ -109,6 +114,7 @@
                             </table>
                         </div>
                         <div id="INDUSTRI" class="tab-pane fade">
+                            <!-- Tabel INDUSTRI -->
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -128,7 +134,11 @@
                                             class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Gabungan
                                         </th>
-                                        </tr>
+                                        <!-- <th
+                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                            Action
+                                        </th> -->
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($market_lintasan as $data)
@@ -208,6 +218,7 @@
     </div>
 </div>
 
+<!-- Bootstrap JS -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
