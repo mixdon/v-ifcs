@@ -19,7 +19,7 @@ class pelabuhanMerakController extends Controller
         $validYears = range($startYear, $currentYear);
     
         $tahun = $request->input('tahun', null);
-        $selectedTab = $request->input('tab', 'IFCS'); 
+        $selectedTab = $request->input('tab', 'IFCS');
     
         if ($tahun && in_array($tahun, $validYears)) {
             $this->simpanDataTotalIFCS($tahun);
@@ -95,6 +95,9 @@ class pelabuhanMerakController extends Controller
         $record = pelabuhan_merak::findOrFail($id);
         
         if ($record->update($validatedData)) {
+            // Panggil metode untuk menghitung ulang total pada model
+            $record->calculateAndSaveTotal();
+
             $tahunRedirect = $record->tahun; 
             $jenisRedirect = strtoupper($record->jenis);
 
@@ -139,7 +142,7 @@ class pelabuhanMerakController extends Controller
             
             $uploadedYears = [];
             foreach ($records as $record) {
-                pelabuhan_merak::updateOrCreate(
+                $data = pelabuhan_merak::updateOrCreate(
                     ['tahun' => $record['tahun'], 'golongan' => $record['golongan'], 'jenis' => $record['jenis']],
                     [
                         'januari' => $record['januari'],
@@ -156,6 +159,8 @@ class pelabuhanMerakController extends Controller
                         'desember' => $record['desember'],
                     ]
                 );
+                // Panggil metode untuk menghitung ulang total pada model
+                $data->calculateAndSaveTotal();
                 $uploadedYears[] = $record['tahun'];
             }
 

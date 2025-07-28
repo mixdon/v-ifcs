@@ -93,30 +93,35 @@ class pelabuhanBakauheniController extends Controller
         ]);
     
         $record = pelabuhan_bakauheni::findOrFail($id);
-        $record->update($validatedData);
-    
-        $tahunRedirect = $record->tahun; 
-        $jenisRedirect = strtoupper($record->jenis);
+        if ($record->update($validatedData)) {
+            // Panggil metode untuk menghitung ulang total pada model
+            $record->calculateAndSaveTotal();
 
-        switch (strtolower($record->jenis)) {
-            case 'ifcs':
-                $this->simpanDataTotalIFCS($record->tahun);
-                break;
-            case 'redeem':
-                $this->simpanDataTotalREDEEM($record->tahun);
-                break;
-            case 'nonifcs':
-                $this->simpanDataTotalNONIFCS($record->tahun);
-                break;
-            case 'reguler':
-                $this->simpanDataTotalREGULER($record->tahun);
-                break;
+            $tahunRedirect = $record->tahun; 
+            $jenisRedirect = strtoupper($record->jenis);
+
+            switch (strtolower($record->jenis)) {
+                case 'ifcs':
+                    $this->simpanDataTotalIFCS($record->tahun);
+                    break;
+                case 'redeem':
+                    $this->simpanDataTotalREDEEM($record->tahun);
+                    break;
+                case 'nonifcs':
+                    $this->simpanDataTotalNONIFCS($record->tahun);
+                    break;
+                case 'reguler':
+                    $this->simpanDataTotalREGULER($record->tahun);
+                    break;
+            }
+
+            return redirect()->route('pelabuhan.bakauheni.index', [
+                'tahun' => $tahunRedirect,
+                'tab' => $jenisRedirect
+            ])->with('update_bakauheni_success', 'Data berhasil diperbarui.');
+        } else {
+             return redirect()->back()->with('update_bakauheni_gagal', 'Gagal memperbarui data.');
         }
-
-        return redirect()->route('pelabuhan.bakauheni.index', [
-            'tahun' => $tahunRedirect,
-            'tab' => $jenisRedirect
-        ])->with('update_bakauheni_success', 'Data berhasil diperbarui.');
     }
 
     public function uploadcsvPelabuhanBakauheni(Request $request)
@@ -136,7 +141,7 @@ class pelabuhanBakauheniController extends Controller
             
             $uploadedYears = [];
             foreach ($records as $record) {
-                pelabuhan_bakauheni::updateOrCreate(
+                $data = pelabuhan_bakauheni::updateOrCreate(
                     ['tahun' => $record['tahun'], 'golongan' => $record['golongan'], 'jenis' => $record['jenis']],
                     [
                         'januari' => $record['januari'],
@@ -153,6 +158,8 @@ class pelabuhanBakauheniController extends Controller
                         'desember' => $record['desember'],
                     ]
                 );
+                // Panggil metode untuk menghitung ulang total pada model
+                $data->calculateAndSaveTotal();
                 $uploadedYears[] = $record['tahun'];
             }
 
