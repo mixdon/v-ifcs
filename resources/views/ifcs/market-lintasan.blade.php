@@ -29,13 +29,14 @@
 
                     {{-- Tombol untuk memicu perhitungan data --}}
                     <div class="mb-3">
-                        <a href="{{ route('market-lintasan.calculate', ['tahun' => $selectedYear ?? date('Y')]) }}" 
+                        {{-- Default tahun jika tidak ada yang dipilih adalah tahun saat ini --}}
+                        <a href="{{ route('market-lintasan.calculate', ['tahun' => $selectedYear ?? date('Y')]) }}"
                            class="btn btn-info" id="calculateButton">
                             Trigger Perhitungan Data
                         </a>
                     </div>
                     
-                    {{-- Tampilkan notifikasi jika ada --}}
+                    {{-- Tampilkan notifikasi jika ada (sukses atau error) --}}
                     @if (session('success'))
                         <div class="alert alert-success">{{ session('success') }}</div>
                     @endif
@@ -56,6 +57,7 @@
 
                     <div class="tab-content" style="overflow-x: auto;">
                         <div id="IFCS" class="tab-pane fade show active">
+                            <!-- Tabel IFCS -->
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -109,6 +111,7 @@
                             </table>
                         </div>
                         <div id="INDUSTRI" class="tab-pane fade">
+                            <!-- Tabel INDUSTRI -->
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -162,58 +165,99 @@
                             </table>
                         </div>
                     </div>
+
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function () {
+                            var selectedYear = "{{ request()->get('tahun') }}";
+                            var tahunDropdown = document.getElementById("tahunDropdown");
+                            for (var i = 0; i < tahunDropdown.options.length; i++) {
+                                if (tahunDropdown.options[i].value == selectedYear) {
+                                    tahunDropdown.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                            
+                            // Memastikan href tombol sudah benar saat halaman pertama kali dimuat
+                            const initialSelectedYear = "{{ $selectedYear }}";
+                            const calculateButton = document.getElementById('calculateButton');
+                            if (initialSelectedYear) {
+                                calculateButton.href = "{{ url('market-lintasan/calculate') }}/" + initialSelectedYear;
+                                calculateButton.style.display = ''; // Tampilkan tombol
+                            } else {
+                                // Sembunyikan tombol jika 'Select All' dipilih (tidak ada tahun spesifik)
+                                calculateButton.style.display = 'none'; 
+                            }
+
+                            // Memperbarui href tombol saat dropdown tahun berubah
+                            document.getElementById('tahunDropdown').addEventListener('change', function() {
+                                var selectedYear = this.value;
+                                if (selectedYear) {
+                                    calculateButton.href = "{{ url('market-lintasan/calculate') }}/" + selectedYear;
+                                    calculateButton.style.display = ''; // Tampilkan tombol
+                                } else {
+                                    calculateButton.style.display = 'none'; // Sembunyikan tombol
+                                }
+                            });
+                        });
+
+                        function activateTab(clickedElement, event, tabGroup) {
+                            event.preventDefault();
+
+                            var tabGroupId = clickedElement.closest('.nav-tabs').id;
+
+                            document.querySelectorAll('#' + tabGroupId + ' .nav-link').forEach(function (element) {
+                                element.classList.remove('active');
+                            });
+
+                            clickedElement.classList.add('active');
+
+                            var targetTabId = clickedElement.getAttribute('href');
+
+                            document.querySelectorAll('.tab-content').forEach(function (content) {
+                                if (content.parentNode.querySelector('.nav-tabs').id === tabGroupId) { // Perbaikan ini
+                                    content.querySelectorAll('.tab-pane').forEach(function (tab) {
+                                        tab.classList.remove('show', 'active');
+                                    });
+                                }
+                            });
+
+                            document.querySelector(targetTabId).classList.add('show', 'active');
+
+                            localStorage.setItem('activeTab' + tabGroup.trim().charAt(tabGroup.trim().length - 1),
+                                targetTabId);
+                        }
+                    </script>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        var selectedYear = "{{ request()->get('tahun') }}";
-        var tahunDropdown = document.getElementById("tahunDropdown");
-        for (var i = 0; i < tahunDropdown.options.length; i++) {
-            if (tahunDropdown.options[i].value == selectedYear) {
-                tahunDropdown.selectedIndex = i;
-                break;
-            }
-        }
-        
-        // Memastikan href tombol sudah benar saat halaman pertama kali dimuat
-        const initialSelectedYear = "{{ $selectedYear }}";
-        const calculateButton = document.getElementById('calculateButton');
-        if (initialSelectedYear) {
-            calculateButton.href = "{{ url('market-lintasan/calculate') }}/" + initialSelectedYear;
-        } else {
-            calculateButton.style.display = 'none';
-        }
+<!-- Bootstrap JS (sudah ada) -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
-        // Memperbarui href tombol saat dropdown tahun berubah
-        document.getElementById('tahunDropdown').addEventListener('change', function() {
-            var selectedYear = this.value;
-            if (selectedYear) {
-                calculateButton.href = "{{ url('market-lintasan/calculate') }}/" + selectedYear;
-                calculateButton.style.display = '';
-            } else {
-                calculateButton.style.display = 'none';
-            }
+<script>
+    // Script delete confirmation (sudah ada)
+    document.addEventListener('DOMContentLoaded', function () {
+        const buttons = document.querySelectorAll('.btn-delete');
+
+        buttons.forEach(button => {
+            button.addEventListener('click', function () {
+                const confirmDelete = confirm('Apakah Anda yakin ingin menghapus data ini?');
+
+                if (confirmDelete) {
+                    const formId = this.getAttribute('data-id');
+                    const form = document.getElementById('form-delete-' + formId);
+
+                    if (form) {
+                        form.submit();
+                    }
+                }
+            });
         });
     });
 
-    function activateTab(clickedElement, event, tabGroup) {
-        event.preventDefault();
-        var tabGroupId = clickedElement.closest('.nav-tabs').id;
-        document.querySelectorAll('#' + tabGroupId + ' .nav-link').forEach(function (element) {
-            element.classList.remove('active');
-        });
-        clickedElement.classList.add('active');
-        var targetTabId = clickedElement.getAttribute('href');
-        document.querySelectorAll('.tab-content .tab-pane').forEach(function (tab) {
-            tab.classList.remove('show', 'active');
-        });
-        document.querySelector(targetTabId).classList.add('show', 'active');
-        localStorage.setItem('activeTab' + tabGroup.trim().charAt(tabGroup.trim().length - 1), targetTabId);
-    }
 </script>
-
 @endsection

@@ -10,240 +10,397 @@ use App\Models\pelabuhan_bakauheni;
 use App\Models\market_lintasan;
 use Illuminate\Database\QueryException;
 
-// Impor controller yang diperlukan
+// Import controller yang diperlukan untuk memicu perhitungan total pelabuhan
 use App\Http\Controllers\pelabuhanMerakController;
 use App\Http\Controllers\pelabuhanBakauheniController;
 
 class marketLintasanController extends Controller
 {
-    // Fungsi index hanya untuk menampilkan data yang sudah ada.
     public function index(Request $request)
     {
         $currentYear = date('Y');
         $startYear = 2020;
         $validYears = range($startYear, $currentYear);
         $tahun = $request->input('tahun', null);
-        $yearsToFetch = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
+
+        $yearsToProcess = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
 
         try {
-            $market_lintasan = market_lintasan::whereIn('tahun', $yearsToFetch)->get();
-
-            return view('ifcs.market-lintasan', [
-                'market_lintasan' => $market_lintasan,
-                'years' => $validYears,
-                'selectedYear' => $tahun 
-            ]);
-        } catch (QueryException $e) {
-            return redirect()->route('market-lintasan.index')->with('error', 'Terjadi error database: ' . $e->getMessage());
-        }
-    }
-    
-    // Fungsi untuk memicu semua perhitungan dan menyimpan hasilnya
-    public function runCalculationsForYear($tahun)
-    {
-        try {
-            // Buat instance dari controller lain
+            // Inisialisasi controller lain untuk memicu perhitungan total pelabuhan
             $merakController = new pelabuhanMerakController();
             $bakauheniController = new pelabuhanBakauheniController();
 
-            // PENTING: Jalankan perhitungan total data sumber terlebih dahulu
-            $merakController->simpanDataTotalIFCS($tahun);
-            $merakController->simpanDataTotalREDEEM($tahun);
-            $merakController->simpanDataTotalNONIFCS($tahun);
-            $merakController->simpanDataTotalREGULER($tahun);
+            // Lakukan perhitungan untuk setiap tahun yang relevan
+            foreach ($yearsToProcess as $year) {
+                // PENTING: Pastikan data total Pelabuhan Merak dihitung terlebih dahulu
+                $merakController->simpanDataTotalIFCS($year);
+                $merakController->simpanDataTotalREDEEM($year);
+                $merakController->simpanDataTotalNONIFCS($year);
+                $merakController->simpanDataTotalREGULER($year);
 
-            $bakauheniController->simpanDataTotalIFCS($tahun);
-            $bakauheniController->simpanDataTotalREDEEM($tahun);
-            $bakauheniController->simpanDataTotalNONIFCS($tahun);
-            $bakauheniController->simpanDataTotalREGULER($tahun);
+                // PENTING: Pastikan data total Pelabuhan Bakauheni dihitung terlebih dahulu
+                $bakauheniController->simpanDataTotalIFCS($year);
+                $bakauheniController->simpanDataTotalREDEEM($year);
+                $bakauheniController->simpanDataTotalNONIFCS($year);
+                $bakauheniController->simpanDataTotalREGULER($year);
 
-            // Setelah data sumber dihitung, baru lakukan perhitungan Market Lintasan
-            // IFCS
-            $this->simpanDataEksekutifIFCS($tahun);
-            $this->simpanDataLogistikEksekutifIFCS($tahun);
-            $this->simpanDataRedeemEksekutifIFCS($tahun);
-            $this->simpanDataLogistikRedeemEksekutifIFCS($tahun);
-            $this->simpanDataTotalIFCS($tahun);
-        
-            // INDUSTRI
-            $this->simpanDataBusReguler($tahun);
-            $this->simpanDataLogistikReguler($tahun);
-            $this->simpanDataEksekutifNonIFCS($tahun);
-            $this->simpanDataLogistikEksekutifNonIFCS($tahun);
-            $this->simpanDataTotalINDUSTRI($tahun);
-
-            return redirect()->route('market-lintasan.index', ['tahun' => $tahun])
-                             ->with('success', "Perhitungan data Market Lintasan untuk tahun {$tahun} berhasil.");
+                // Setelah data total Merak dan Bakauheni tersedia, baru hitung Market Lintasan
+                // IFCS
+                $this->simpanDataEksekutifIFCS($year);
+                $this->simpanDataLogistikEksekutifIFCS($year);
+                $this->simpanDataRedeemEksekutifIFCS($year);
+                $this->simpanDataLogistikRedeemEksekutifIFCS($year);
+                $this->simpanDataTotalIFCS($year);
+            
+                // INDUSTRI
+                $this->simpanDataBusReguler($year);
+                $this->simpanDataLogistikReguler($year);
+                $this->simpanDataEksekutifNonIFCS($year); // Memperbaiki penamaan fungsi
+                $this->simpanDataLogistikEksekutifNonIFCS($year); // Memperbaiki penamaan fungsi
+                $this->simpanDataTotalINDUSTRI($year);
+            }
         } catch (QueryException $e) {
-            return redirect()->route('market-lintasan.index', ['tahun' => $tahun])
-                             ->with('error', "Terjadi error database saat perhitungan: " . $e->getMessage());
+            // Tangkap dan tampilkan error database jika terjadi
+            return redirect()->route('market-lintasan.index')->with('error', 'Terjadi error database saat perhitungan: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            // Tangkap error umum lainnya (misal: kelas tidak ditemukan jika controller lain belum ada)
+            return redirect()->route('market-lintasan.index')->with('error', 'Terjadi kesalahan sistem: ' . $e->getMessage());
         }
+
+        // Ambil data untuk ditampilkan setelah semua perhitungan (atau jika terjadi error, tampilkan yang ada)
+        $market_lintasan = market_lintasan::whereIn('tahun', $yearsToProcess)->get();
+
+        return view('ifcs.market-lintasan', [
+            'market_lintasan' => $market_lintasan,
+            'years' => $validYears,
+            'selectedYear' => $tahun 
+        ]);
     }
-    
-    // ... (Fungsi-fungsi simpanData... lainnya tetap sama seperti sebelumnya)
-    // ... (Logika sudah diperbaiki di balasan terakhir)
     
     // IFCS
     public function simpanDataEksekutifIFCS($tahun)
     {
-        $golongans = ['VA', 'VIA'];
-        $merakTotal = pelabuhan_merak::whereIn('golongan', $golongans)->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
-        $bakauheniTotal = pelabuhan_bakauheni::whereIn('golongan', $golongans)->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
-        
+        // Ambil data dari pelabuhan_merak
+        $merakVA = pelabuhan_merak::where('golongan', 'VA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $merakVIA = pelabuhan_merak::where('golongan', 'VIA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+
+        // Ambil data dari pelabuhan_bakauheni
+        $bakauheniVA = pelabuhan_bakauheni::where('golongan', 'VA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIA = pelabuhan_bakauheni::where('golongan', 'VIA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+
+        // Hitung total untuk masing-masing pelabuhan
+        $totalMerak = $merakVA + $merakVIA;
+        $totalBakauheni = $bakauheniVA + $bakauheniVIA;
+
+        // Hitung total gabungan
+        $totalGabungan = $totalMerak + $totalBakauheni;
+
+        // Simpan ke tabel market_lintasan
+        // PERBAIKAN: Menggunakan nama golongan 'Eksekutif IFCS' yang lebih sesuai
         market_lintasan::updateOrCreate(
             ['golongan' => 'Eksekutif IFCS', 'jenis' => 'ifcs', 'tahun' => $tahun],
             [
-                'merak' => $merakTotal,
-                'bakauheni' => $bakauheniTotal,
-                'gabungan' => $merakTotal + $bakauheniTotal,
+                'merak' => $totalMerak,
+                'bakauheni' => $totalBakauheni,
+                'gabungan' => $totalGabungan,
             ]
         );
     }
-    
+
     public function simpanDataLogistikEksekutifIFCS($tahun)
     {
-        $golongans = ['IVB', 'VB', 'VIB', 'VII', 'VIII', 'IX'];
-        $merakTotal = pelabuhan_merak::whereIn('golongan', $golongans)->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
-        $bakauheniTotal = pelabuhan_bakauheni::whereIn('golongan', $golongans)->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
-        
+        $merakIVB = pelabuhan_merak::where('golongan', 'IVB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $merakVB = pelabuhan_merak::where('golongan', 'VB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $merakVIB = pelabuhan_merak::where('golongan', 'VIB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $merakVII = pelabuhan_merak::where('golongan', 'VII')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $merakVIII = pelabuhan_merak::where('golongan', 'VIII')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $merakIX = pelabuhan_merak::where('golongan', 'IX')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+
+        $bakauheniIVB = pelabuhan_bakauheni::where('golongan', 'IVB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniVB = pelabuhan_bakauheni::where('golongan', 'VB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIB = pelabuhan_bakauheni::where('golongan', 'VIB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniVII = pelabuhan_bakauheni::where('golongan', 'VII')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIII = pelabuhan_bakauheni::where('golongan', 'VIII')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniIX = pelabuhan_bakauheni::where('golongan', 'IX')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
+
+        $totalMerak = $merakIVB + $merakVB + $merakVIB + $merakVII + $merakVIII + $merakIX;
+        $totalBakauheni = $bakauheniIVB + $bakauheniVB + $bakauheniVIB + $bakauheniVII + $bakauheniVIII + $bakauheniIX;
+
+        $totalGabungan = $totalMerak + $totalBakauheni;
+
         market_lintasan::updateOrCreate(
-            ['golongan' => 'Logistik Eksekutif IFCS', 'jenis' => 'ifcs', 'tahun' => $tahun],
+            ['golongan' => 'Logistik Eksekutif IFCS','jenis' => 'ifcs','tahun' => $tahun],
             [
-                'merak' => $merakTotal,
-                'bakauheni' => $bakauheniTotal,
-                'gabungan' => $merakTotal + $bakauheniTotal,
+                'merak' => $totalMerak,
+                'bakauheni' => $totalBakauheni,
+                'gabungan' => $totalGabungan,
             ]
         );
     }
-    
+
     public function simpanDataRedeemEksekutifIFCS($tahun)
     {
-        $golongans = ['VA', 'VIA'];
-        $merakTotal = pelabuhan_merak::whereIn('golongan', $golongans)->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
-        $bakauheniTotal = pelabuhan_bakauheni::whereIn('golongan', $golongans)->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
-        
+        // Ambil data dari pelabuhan_merak
+        $merakVA = pelabuhan_merak::where('golongan', 'VA')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $merakVIA = pelabuhan_merak::where('golongan', 'VIA')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+
+        // Ambil data dari pelabuhan_bakauheni
+        $bakauheniVA = pelabuhan_bakauheni::where('golongan', 'VA')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIA = pelabuhan_bakauheni::where('golongan', 'VIA')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+
+        // Hitung total untuk masing-masing pelabuhan
+        $totalMerak = $merakVA + $merakVIA;
+        $totalBakauheni = $bakauheniVA + $bakauheniVIA;
+
+        // Hitung total gabungan
+        $totalGabungan = $totalMerak + $totalBakauheni;
+
+        // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
-            ['golongan' => 'Redeem Eksekutif IFCS', 'jenis' => 'ifcs', 'tahun' => $tahun],
+            ['golongan' => 'Redeem Eksekutif IFCS', 'jenis' => 'ifcs','tahun' => $tahun],
             [
-                'merak' => $merakTotal,
-                'bakauheni' => $bakauheniTotal,
-                'gabungan' => $merakTotal + $bakauheniTotal,
+                'merak' => $totalMerak,
+                'bakauheni' => $totalBakauheni,
+                'gabungan' => $totalGabungan,
             ]
         );
     }
     
     public function simpanDataLogistikRedeemEksekutifIFCS($tahun)
     {
-        $golongans = ['IVB', 'VB', 'VIB', 'VII', 'VIII', 'IX'];
-        $merakTotal = pelabuhan_merak::whereIn('golongan', $golongans)->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
-        $bakauheniTotal = pelabuhan_bakauheni::whereIn('golongan', $golongans)->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
-        
+        // Ambil data dari pelabuhan_merak
+        $merakIVB = pelabuhan_merak::where('golongan', 'IVB')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $merakVB = pelabuhan_merak::where('golongan', 'VB')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $merakVIB = pelabuhan_merak::where('golongan', 'VIB')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $merakVII = pelabuhan_merak::where('golongan', 'VII')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $merakVIII = pelabuhan_merak::where('golongan', 'VIII')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $merakIX = pelabuhan_merak::where('golongan', 'IX')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+
+        // Ambil data dari pelabuhan_bakauheni
+        $bakauheniIVB = pelabuhan_bakauheni::where('golongan', 'IVB')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $bakauheniVB = pelabuhan_bakauheni::where('golongan', 'VB')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIB = pelabuhan_bakauheni::where('golongan', 'VIB')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $bakauheniVII = pelabuhan_bakauheni::where('golongan', 'VII')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIII = pelabuhan_bakauheni::where('golongan', 'VIII')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $bakauheniIX = pelabuhan_bakauheni::where('golongan', 'IX')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+
+        // Hitung total untuk masing-masing pelabuhan
+        $totalMerak = $merakIVB + $merakVB + $merakVIB + $merakVII + $merakVIII + $merakIX;
+        $totalBakauheni = $bakauheniIVB + $bakauheniVB + $bakauheniVIB + $bakauheniVII + $bakauheniVIII + $bakauheniIX;
+
+        // Hitung total gabungan
+        $totalGabungan = $totalMerak + $totalBakauheni;
+
+        // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
-            ['golongan' => 'Logistik Redeem Eksekutif IFCS', 'jenis' => 'ifcs', 'tahun' => $tahun],
+            ['golongan' => 'Logistik Redeem Eksekutif IFCS','jenis' => 'ifcs','tahun' => $tahun],
             [
-                'merak' => $merakTotal,
-                'bakauheni' => $bakauheniTotal,
-                'gabungan' => $merakTotal + $bakauheniTotal,
+                'merak' => $totalMerak,
+                'bakauheni' => $totalBakauheni,
+                'gabungan' => $totalGabungan,
             ]
         );
     }
-    
+
     public function simpanDataTotalIFCS($tahun)
     {
-        $golongans = ['Eksekutif IFCS', 'Logistik Eksekutif IFCS', 'Redeem Eksekutif IFCS', 'Logistik Redeem Eksekutif IFCS'];
-        $merakTotal = market_lintasan::whereIn('golongan', $golongans)->where('tahun', $tahun)->where('jenis', 'ifcs')->sum('merak');
-        $bakauheniTotal = market_lintasan::whereIn('golongan', $golongans)->where('tahun', $tahun)->where('jenis', 'ifcs')->sum('bakauheni');
-        $gabunganTotal = market_lintasan::whereIn('golongan', $golongans)->where('tahun', $tahun)->where('jenis', 'ifcs')->sum('gabungan');
+        // Ambil data untuk kolom 'merak'
+        // PERBAIKAN: Menghapus spasi ekstra pada nama golongan
+        $merak1 = market_lintasan::where('golongan', 'Eksekutif IFCS')->where('tahun', $tahun)->sum('merak');
+        $merak2 = market_lintasan::where('golongan', 'Logistik Eksekutif IFCS')->where('tahun', $tahun)->sum('merak');
+        $merak3 = market_lintasan::where('golongan', 'Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('merak');
+        $merak4 = market_lintasan::where('golongan', 'Logistik Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('merak');
     
+        // Ambil data untuk kolom 'bakauheni'
+        $bakauheni1 = market_lintasan::where('golongan', 'Eksekutif IFCS')->where('tahun', $tahun)->sum('bakauheni');
+        $bakauheni2 = market_lintasan::where('golongan', 'Logistik Eksekutif IFCS')->where('tahun', $tahun)->sum('bakauheni');
+        $bakauheni3 = market_lintasan::where('golongan', 'Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('bakauheni');
+        $bakauheni4 = market_lintasan::where('golongan', 'Logistik Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('bakauheni');
+    
+        // Ambil data untuk kolom 'gabungan'
+        // PERBAIKAN: Menghapus spasi ekstra pada nama golongan
+        $gabungan1 = market_lintasan::where('golongan', 'Eksekutif IFCS')->where('tahun', $tahun)->sum('gabungan');
+        $gabungan2 = market_lintasan::where('golongan', 'Logistik Eksekutif IFCS')->where('tahun', $tahun)->sum('gabungan');
+        $gabungan3 = market_lintasan::where('golongan', 'Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('gabungan');
+        $gabungan4 = market_lintasan::where('golongan', 'Logistik Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('gabungan');
+    
+        // Hitung total untuk masing-masing kolom
+        $totalMerak = $merak1 + $merak2 + $merak3 + $merak4;
+        $totalBakauheni = $bakauheni1 + $bakauheni2 + $bakauheni3 + $bakauheni4;
+        $totalGabungan = $gabungan1 + $gabungan2 + $gabungan3 + $gabungan4;
+
+        // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
             ['golongan' => 'Total', 'jenis' => 'ifcs', 'tahun' => $tahun],
             [
-                'merak' => $merakTotal,
-                'bakauheni' => $bakauheniTotal,
-                'gabungan' => $gabunganTotal,
+                'merak' => $totalMerak,
+                'bakauheni' => $totalBakauheni,
+                'gabungan' => $totalGabungan,
             ]
         );
     }    
-    
-    // INDUSTRI
+ 
+    //INDUSTRI
     public function simpanDataBusReguler($tahun)
     {
-        $golongans = ['VA', 'VIA'];
-        $merakTotal = pelabuhan_merak::whereIn('golongan', $golongans)->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
-        $bakauheniTotal = pelabuhan_bakauheni::whereIn('golongan', $golongans)->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
-        
+        // Ambil data dari pelabuhan_merak
+        $merakVA = pelabuhan_merak::where('golongan', 'VA')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $merakVIA = pelabuhan_merak::where('golongan', 'VIA')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+
+        // Ambil data dari pelabuhan_bakauheni
+        $bakauheniVA = pelabuhan_bakauheni::where('golongan', 'VA')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIA = pelabuhan_bakauheni::where('golongan', 'VIA')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+
+        // Hitung total untuk masing-masing pelabuhan
+        $totalMerak = $merakVA + $merakVIA;
+        $totalBakauheni = $bakauheniVA + $bakauheniVIA;
+
+        // Hitung total gabungan
+        $totalGabungan = $totalMerak + $totalBakauheni;
+
+        // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
-            ['golongan' => 'Kendaraan Bus Reguler', 'jenis' => 'industri', 'tahun' => $tahun],
+            ['golongan' => 'Kendaraan Bus Reguler', 'jenis' => 'industri','tahun' => $tahun],
             [
-                'merak' => $merakTotal,
-                'bakauheni' => $bakauheniTotal,
-                'gabungan' => $merakTotal + $bakauheniTotal,
+                'merak' => $totalMerak,
+                'bakauheni' => $totalBakauheni,
+                'gabungan' => $totalGabungan,
             ]
         );
     }
 
     public function simpanDataLogistikReguler($tahun)
     {
-        $golongans = ['IVB', 'VB', 'VIB', 'VII', 'VIII', 'IX'];
-        $merakTotal = pelabuhan_merak::whereIn('golongan', $golongans)->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
-        $bakauheniTotal = pelabuhan_bakauheni::whereIn('golongan', $golongans)->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
-        
+        // Ambil data dari pelabuhan_merak
+        $merakIVB = pelabuhan_merak::where('golongan', 'IVB')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $merakVB = pelabuhan_merak::where('golongan', 'VB')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $merakVIB = pelabuhan_merak::where('golongan', 'VIB')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $merakVII = pelabuhan_merak::where('golongan', 'VII')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $merakVIII = pelabuhan_merak::where('golongan', 'VIII')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $merakIX = pelabuhan_merak::where('golongan', 'IX')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+
+        // Ambil data dari pelabuhan_bakauheni
+        $bakauheniIVB = pelabuhan_bakauheni::where('golongan', 'IVB')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $bakauheniVB = pelabuhan_bakauheni::where('golongan', 'VB')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIB = pelabuhan_bakauheni::where('golongan', 'VIB')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $bakauheniVII = pelabuhan_bakauheni::where('golongan', 'VII')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIII = pelabuhan_bakauheni::where('golongan', 'VIII')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $bakauheniIX = pelabuhan_bakauheni::where('golongan', 'IX')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+
+        $totalMerak = $merakIVB + $merakVB + $merakVIB + $merakVII + $merakVIII + $merakIX;
+        $totalBakauheni = $bakauheniIVB + $bakauheniVB + $bakauheniVIB + $bakauheniVII + $bakauheniVIII + $bakauheniIX;
+
+        $totalGabungan = $totalMerak + $totalBakauheni;
+
         market_lintasan::updateOrCreate(
-            ['golongan' => 'Logistik Reguler', 'jenis' => 'industri', 'tahun' => $tahun],
+            ['golongan' => 'Logistik Reguler','jenis' => 'industri','tahun' => $tahun],
             [
-                'merak' => $merakTotal,
-                'bakauheni' => $bakauheniTotal,
-                'gabungan' => $merakTotal + $bakauheniTotal,
+                'merak' => $totalMerak,
+                'bakauheni' => $totalBakauheni,
+                'gabungan' => $totalGabungan,
+            ]
+        );
+    }
+
+    // PERBAIKAN: Mengganti nama fungsi ini dari simpanDataEksekkutifNonIFCS
+    public function simpanDataLogistikEksekutifNonIFCS($tahun)
+    {
+        // Ambil data dari pelabuhan_merak
+        $merakIVB = pelabuhan_merak::where('golongan', 'IVB')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $merakVB = pelabuhan_merak::where('golongan', 'VB')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $merakVIB = pelabuhan_merak::where('golongan', 'VIB')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $merakVII = pelabuhan_merak::where('golongan', 'VII')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $merakVIII = pelabuhan_merak::where('golongan', 'VIII')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $merakIX = pelabuhan_merak::where('golongan', 'IX')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+
+        // Ambil data dari pelabuhan_bakauheni
+        $bakauheniIVB = pelabuhan_bakauheni::where('golongan', 'IVB')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniVB = pelabuhan_bakauheni::where('golongan', 'VB')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIB = pelabuhan_bakauheni::where('golongan', 'VIB')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniVII = pelabuhan_bakauheni::where('golongan', 'VII')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIII = pelabuhan_bakauheni::where('golongan', 'VIII')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniIX = pelabuhan_bakauheni::where('golongan', 'IX')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+
+        // Hitung total untuk masing-masing pelabuhan
+        $totalMerak = $merakIVB + $merakVB + $merakVIB + $merakVII + $merakVIII + $merakIX;
+        $totalBakauheni = $bakauheniIVB + $bakauheniVB + $bakauheniVIB + $bakauheniVII + $bakauheniVIII + $bakauheniIX;
+
+        // Hitung total gabungan
+        $totalGabungan = $totalMerak + $totalBakauheni;
+
+        // Simpan ke tabel market_lintasan
+        market_lintasan::updateOrCreate(
+            ['golongan' => 'Logistik Eksekutif Non IFCS','jenis' => 'industri','tahun' => $tahun],
+            [
+                'merak' => $totalMerak,
+                'bakauheni' => $totalBakauheni,
+                'gabungan' => $totalGabungan,
             ]
         );
     }
     
     public function simpanDataEksekutifNonIFCS($tahun)
     {
-        $golongans = ['VA', 'VIA'];
-        $merakTotal = pelabuhan_merak::whereIn('golongan', $golongans)->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
-        $bakauheniTotal = pelabuhan_bakauheni::whereIn('golongan', $golongans)->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
-        
-        market_lintasan::updateOrCreate(
-            ['golongan' => 'Eksekutif Non IFCS', 'jenis' => 'industri', 'tahun' => $tahun],
-            [
-                'merak' => $merakTotal,
-                'bakauheni' => $bakauheniTotal,
-                'gabungan' => $merakTotal + $bakauheniTotal,
-            ]
-        );
-    }
+        // Ambil data dari pelabuhan_merak
+        $merakVA = pelabuhan_merak::where('golongan', 'VA')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $merakVIA = pelabuhan_merak::where('golongan', 'VIA')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
 
-    public function simpanDataLogistikEksekutifNonIFCS($tahun)
-    {
-        $golongans = ['IVB', 'VB', 'VIB', 'VII', 'VIII', 'IX'];
-        $merakTotal = pelabuhan_merak::whereIn('golongan', $golongans)->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
-        $bakauheniTotal = pelabuhan_bakauheni::whereIn('golongan', $golongans)->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
-        
+        // Ambil data dari pelabuhan_bakauheni
+        $bakauheniVA = pelabuhan_bakauheni::where('golongan', 'VA')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $bakauheniVIA = pelabuhan_bakauheni::where('golongan', 'VIA')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+
+        // Hitung total untuk masing-masing pelabuhan
+        $totalMerak = $merakVA + $merakVIA;
+        $totalBakauheni = $bakauheniVA + $bakauheniVIA;
+
+        // Hitung total gabungan
+        $totalGabungan = $totalMerak + $totalBakauheni;
+
+        // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
-            ['golongan' => 'Logistik Eksekutif Non IFCS', 'jenis' => 'industri', 'tahun' => $tahun],
+            ['golongan' => 'Eksekutif Non IFCS', 'jenis' => 'industri','tahun' => $tahun],
             [
-                'merak' => $merakTotal,
-                'bakauheni' => $bakauheniTotal,
-                'gabungan' => $merakTotal + $bakauheniTotal,
+                'merak' => $totalMerak,
+                'bakauheni' => $totalBakauheni,
+                'gabungan' => $totalGabungan,
             ]
         );
     }
 
     public function simpanDataTotalINDUSTRI($tahun)
     {
-        $golongans = ['Kendaraan Bus Reguler', 'Logistik Reguler', 'Eksekutif Non IFCS', 'Logistik Eksekutif Non IFCS'];
-        $merakTotal = market_lintasan::whereIn('golongan', $golongans)->where('tahun', $tahun)->where('jenis', 'industri')->sum('merak');
-        $bakauheniTotal = market_lintasan::whereIn('golongan', $golongans)->where('tahun', $tahun)->where('jenis', 'industri')->sum('bakauheni');
-        $gabunganTotal = market_lintasan::whereIn('golongan', $golongans)->where('tahun', $tahun)->where('jenis', 'industri')->sum('gabungan');
-        
+        // Ambil data untuk kolom 'merak'
+        $merak1 = market_lintasan::where('golongan', 'Kendaraan Bus Reguler')->where('tahun', $tahun)->sum('merak');
+        $merak2 = market_lintasan::where('golongan', 'Logistik Reguler')->where('tahun', $tahun)->sum('merak');
+        $merak3 = market_lintasan::where('golongan', 'Logistik Eksekutif Non IFCS')->where('tahun', $tahun)->sum('merak');
+        $merak4 = market_lintasan::where('golongan', 'Eksekutif Non IFCS')->where('tahun', $tahun)->sum('merak');
+    
+        // Ambil data untuk kolom 'bakauheni'
+        $bakauheni1 = market_lintasan::where('golongan', 'Kendaraan Bus Reguler')->where('tahun', $tahun)->sum('bakauheni');
+        $bakauheni2 = market_lintasan::where('golongan', 'Logistik Reguler')->where('tahun', $tahun)->sum('bakauheni');
+        $bakauheni3 = market_lintasan::where('golongan', 'Logistik Eksekutif Non IFCS')->where('tahun', $tahun)->sum('bakauheni');
+        $bakauheni4 = market_lintasan::where('golongan', 'Eksekutif Non IFCS')->where('tahun', $tahun)->sum('bakauheni');
+    
+        // Ambil data untuk kolom 'gabungan'
+        // PERBAIKAN: Menghapus spasi ekstra pada nama golongan
+        $gabungan1 = market_lintasan::where('golongan', 'Kendaraan Bus Reguler')->where('tahun', $tahun)->sum('gabungan');
+        $gabungan2 = market_lintasan::where('golongan', 'Logistik Reguler')->where('tahun', $tahun)->sum('gabungan');
+        $gabungan3 = market_lintasan::where('golongan', 'Logistik Eksekutif Non IFCS')->where('tahun', $tahun)->sum('gabungan');
+        $gabungan4 = market_lintasan::where('golongan', 'Eksekutif Non IFCS')->where('tahun', $tahun)->sum('gabungan');
+    
+        // Hitung total untuk masing-masing kolom
+        $totalMerak = $merak1 + $merak2 + $merak3 + $merak4;
+        $totalBakauheni = $bakauheni1 + $bakauheni2 + $bakauheni3 + $bakauheni4;
+        $totalGabungan = $gabungan1 + $gabungan2 + $gabungan3 + $gabungan4;
+    
+        // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
             ['golongan' => 'Total', 'jenis' => 'industri', 'tahun' => $tahun],
             [
-                'merak' => $merakTotal,
-                'bakauheni' => $bakauheniTotal,
-                'gabungan' => $gabunganTotal,
+                'merak' => $totalMerak,
+                'bakauheni' => $totalBakauheni,
+                'gabungan' => $totalGabungan,
             ]
         );
-    }
+    }  
 }
