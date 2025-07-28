@@ -6,20 +6,44 @@ use App\Models\pelabuhan_merak;
 use App\Models\pelabuhan_bakauheni;
 use App\Models\market_lintasan;
 use App\Models\komposisi_segmen;
+use Illuminate\Support\Facades\Log; // Import kelas Log
 
 class DataCalculationService
 {
+    /**
+     * Memulai semua perhitungan data untuk tahun tertentu.
+     *
+     * @param int $tahun Tahun data yang akan dihitung.
+     * @return void
+     */
     public function calculateAllForYear($tahun)
     {
-        // Panggil fungsi perhitungan untuk Komposisi Segmen
-        $this->calculateKomposisiSegmen($tahun);
-        // Panggil fungsi perhitungan untuk Market Lintasan
-        $this->calculateMarketLintasan($tahun);
+        Log::info("Memulai DataCalculationService untuk tahun: {$tahun}"); // Log awal proses
+        
+        try {
+            $this->calculateKomposisiSegmen($tahun);
+            Log::info("Perhitungan Komposisi Segmen selesai berhasil untuk tahun: {$tahun}");
+        } catch (\Exception $e) {
+            Log::error("Kesalahan dalam perhitungan Komposisi Segmen: " . $e->getMessage());
+        }
+
+        try {
+            $this->calculateMarketLintasan($tahun);
+            Log::info("Perhitungan Market Lintasan selesai berhasil untuk tahun: {$tahun}");
+        } catch (\Exception $e) {
+            Log::error("Kesalahan dalam perhitungan Market Lintasan: " . $e->getMessage());
+        }
     }
 
+    /**
+     * Mengatur urutan perhitungan untuk data Komposisi Segmen.
+     *
+     * @param int $tahun Tahun data.
+     * @return void
+     */
     private function calculateKomposisiSegmen($tahun)
     {
-        // Merak
+        // Perhitungan untuk Pelabuhan Merak
         $this->simpanDataMerakIVA($tahun);
         $this->simpanDataMerakIVB($tahun);
         $this->simpanDataMerakVA($tahun);
@@ -30,8 +54,10 @@ class DataCalculationService
         $this->simpanDataMerakVIII($tahun);
         $this->simpanDataMerakIX($tahun);
         $this->simpanDataTotalMerak($tahun);
+        
+        Log::info("Perhitungan Komposisi Segmen (Merak) untuk tahun {$tahun} selesai.");
 
-        // Bakauheni
+        // Perhitungan untuk Pelabuhan Bakauheni
         $this->simpanDataBakauheniIVA($tahun);
         $this->simpanDataBakauheniIVB($tahun);
         $this->simpanDataBakauheniVA($tahun);
@@ -43,7 +69,9 @@ class DataCalculationService
         $this->simpanDataBakauheniIX($tahun);
         $this->simpanDataTotalBakauheni($tahun);
 
-        // Gabungan
+        Log::info("Perhitungan Komposisi Segmen (Bakauheni) untuk tahun {$tahun} selesai.");
+
+        // Perhitungan untuk Gabungan (Merak + Bakauheni)
         $this->simpanDataGabunganIVA($tahun);
         $this->simpanDataGabunganIVB($tahun);
         $this->simpanDataGabunganVA($tahun);
@@ -54,9 +82,14 @@ class DataCalculationService
         $this->simpanDataGabunganVIII($tahun);
         $this->simpanDataGabunganIX($tahun);
         $this->simpanDataTotalGabungan($tahun);
+
+        Log::info("Perhitungan Komposisi Segmen (Gabungan) untuk tahun {$tahun} selesai.");
     }
     
-    //Merak
+    /**
+     * Menyimpan data Komposisi Segmen untuk Merak Golongan IVA.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataMerakIVA($tahun)
     {
         $ifcsIVA = pelabuhan_merak::where('golongan', 'IVA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -64,6 +97,8 @@ class DataCalculationService
         $totalIFCSRedeemIVA = $ifcsIVA + $redeemIVA;
         $nonifcsIVA = pelabuhan_merak::where('golongan', 'IVA')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
         $total = $totalIFCSRedeemIVA + $nonifcsIVA;
+
+        Log::info("Merak IVA -> IFCS+REDEEM: {$totalIFCSRedeemIVA}, NONIFCS: {$nonifcsIVA}, TOTAL: {$total}");
 
         komposisi_segmen::updateOrCreate(
             [ 'golongan' => 'IVA', 'jenis' => 'merak','tahun' => $tahun],
@@ -75,6 +110,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Merak Golongan IVB.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataMerakIVB($tahun)
     {
         $ifcsIVB = pelabuhan_merak::where('golongan', 'IVB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -93,6 +132,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Merak Golongan VA.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataMerakVA($tahun)
     {
         $ifcsVA = pelabuhan_merak::where('golongan', 'VA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -111,6 +154,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Merak Golongan VB.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataMerakVB($tahun)
     {
         $ifcsVB = pelabuhan_merak::where('golongan', 'VB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -129,6 +176,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Merak Golongan VIA.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataMerakVIA($tahun)
     {
         $ifcsVIA = pelabuhan_merak::where('golongan', 'VIA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -147,6 +198,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Merak Golongan VIB.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataMerakVIB($tahun)
     {
         $ifcsVIB = pelabuhan_merak::where('golongan', 'VIB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -165,6 +220,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Merak Golongan VII.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataMerakVII($tahun)
     {
         $ifcsVII = pelabuhan_merak::where('golongan', 'VII')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -183,6 +242,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Merak Golongan VIII.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataMerakVIII($tahun)
     {
         $ifcsVIII = pelabuhan_merak::where('golongan', 'VIII')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -201,6 +264,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Merak Golongan IX.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataMerakIX($tahun)
     {
         $ifcsIX = pelabuhan_merak::where('golongan', 'IX')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -219,6 +286,10 @@ class DataCalculationService
         );
     }
     
+    /**
+     * Menyimpan data total Komposisi Segmen untuk Merak.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataTotalMerak($tahun)
     {
         $totalifcs = komposisi_segmen::whereIn('golongan', ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'])
@@ -243,7 +314,12 @@ class DataCalculationService
         );
     }
 
-    //Bakauheni
+    //Bagian Bakauheni (Logika serupa dengan Merak)
+
+    /**
+     * Menyimpan data Komposisi Segmen untuk Bakauheni Golongan IVA.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataBakauheniIVA($tahun)
     {
         $ifcsIVA = pelabuhan_bakauheni::where('golongan', 'IVA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -261,6 +337,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Bakauheni Golongan IVB.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataBakauheniIVB($tahun)
     {
         $ifcsIVB = pelabuhan_bakauheni::where('golongan', 'IVB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -278,6 +358,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Bakauheni Golongan VA.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataBakauheniVA($tahun)
     {
         $ifcsVA = pelabuhan_bakauheni::where('golongan', 'VA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -295,6 +379,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Bakauheni Golongan VB.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataBakauheniVB($tahun)
     {
         $ifcsVB = pelabuhan_bakauheni::where('golongan', 'VB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -312,6 +400,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Bakauheni Golongan VIA.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataBakauheniVIA($tahun)
     {
         $ifcsVIA = pelabuhan_bakauheni::where('golongan', 'VIA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -329,6 +421,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Bakauheni Golongan VIB.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataBakauheniVIB($tahun)
     {
         $ifcsVIB = pelabuhan_bakauheni::where('golongan', 'VIB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -346,6 +442,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Bakauheni Golongan VII.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataBakauheniVII($tahun)
     {
         $ifcsVII = pelabuhan_bakauheni::where('golongan', 'VII')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -363,6 +463,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Bakauheni Golongan VIII.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataBakauheniVIII($tahun)
     {
         $ifcsVIII = pelabuhan_bakauheni::where('golongan', 'VIII')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -380,6 +484,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Bakauheni Golongan IX.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataBakauheniIX($tahun)
     {
         $ifcsIX = pelabuhan_bakauheni::where('golongan', 'IX')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -397,6 +505,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data total Komposisi Segmen untuk Bakauheni.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataTotalBakauheni($tahun)
     {
         $totalifcs = komposisi_segmen::whereIn('golongan', ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'])
@@ -421,7 +533,12 @@ class DataCalculationService
         );
     }
 
-    //Gabungan
+    //Bagian Gabungan (Logika untuk menjumlahkan Merak dan Bakauheni)
+
+    /**
+     * Menyimpan data Komposisi Segmen untuk Gabungan Golongan IVA.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataGabunganIVA($tahun)
     {
         $IFCSmerakIVA = komposisi_segmen::where('golongan', 'IVA')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem');
@@ -444,6 +561,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Gabungan Golongan IVB.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataGabunganIVB($tahun)
     {
         $IFCSmerakIVB = komposisi_segmen::where('golongan', 'IVB')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem'); 
@@ -466,6 +587,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Gabungan Golongan VA.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataGabunganVA($tahun)
     {
         $IFCSmerakVA = komposisi_segmen::where('golongan', 'VA')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem'); 
@@ -488,6 +613,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Gabungan Golongan VB.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataGabunganVB($tahun)
     {
         $IFCSmerakVB = komposisi_segmen::where('golongan', 'VB')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem'); 
@@ -510,6 +639,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Gabungan Golongan VIA.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataGabunganVIA($tahun)
     {
         $IFCSmerakVIA = komposisi_segmen::where('golongan', 'VIA')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem'); 
@@ -532,6 +665,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Gabungan Golongan VIB.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataGabunganVIB($tahun)
     {
         $IFCSmerakVIB = komposisi_segmen::where('golongan', 'VIB')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem'); 
@@ -554,6 +691,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Gabungan Golongan VII.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataGabunganVII($tahun)
     {
         $IFCSmerakVII = komposisi_segmen::where('golongan', 'VII')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem'); 
@@ -576,6 +717,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Gabungan Golongan VIII.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataGabunganVIII($tahun)
     {
         $IFCSmerakVIII = komposisi_segmen::where('golongan', 'VIII')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem'); 
@@ -598,6 +743,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Komposisi Segmen untuk Gabungan Golongan IX.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataGabunganIX($tahun)
     {
         $IFCSmerakIX = komposisi_segmen::where('golongan', 'IX')->where('jenis', 'merak')->where('tahun', $tahun)->value('ifcs_redeem'); 
@@ -620,6 +769,10 @@ class DataCalculationService
         );
     }
     
+    /**
+     * Menyimpan data total Komposisi Segmen untuk Gabungan.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataTotalGabungan($tahun)
     {
         $totalifcs = komposisi_segmen::whereIn('golongan', ['IVA', 'IVB', 'VA', 'VB', 'VIA', 'VIB', 'VII', 'VIII', 'IX'])
@@ -644,24 +797,38 @@ class DataCalculationService
         );
     }
     
+    /**
+     * Mengatur urutan perhitungan untuk data Market Lintasan.
+     * @param int $tahun Tahun data.
+     * @return void
+     */
     private function calculateMarketLintasan($tahun)
     {
-        // IFCS
+        // Perhitungan untuk IFCS
         $this->simpanDataEksekutifIFCS($tahun);
         $this->simpanDataLogistikEksekutifIFCS($tahun);
         $this->simpanDataRedeemEksekutifIFCS($tahun);
         $this->simpanDataLogistikRedeemEksekutifIFCS($tahun);
         $this->simpanDataTotalIFCS($tahun);
+        
+        Log::info("Perhitungan Market Lintasan (IFCS) untuk tahun {$tahun} selesai.");
     
-        // INDUSTRI
+        // Perhitungan untuk INDUSTRI
         $this->simpanDataBusReguler($tahun);
         $this->simpanDataLogistikReguler($tahun);
         $this->simpanDataEksekkutifNonIFCS($tahun);
         $this->simpanDataEksekutifNonIFCS($tahun);
         $this->simpanDataTotalINDUSTRI($tahun);
+        
+        Log::info("Perhitungan Market Lintasan (INDUSTRI) untuk tahun {$tahun} selesai.");
     }
+    
+    //Bagian IFCS Market Lintasan
 
-    //IFCS
+    /**
+     * Menyimpan data Market Lintasan untuk Eksekutif IFCS.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataEksekutifIFCS($tahun)
     {
         $merakVA = pelabuhan_merak::where('golongan', 'VA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -673,6 +840,8 @@ class DataCalculationService
         $totalBakauheni = $bakauheniVA + $bakauheniVIA;
         $totalGabungan = $totalMerak + $totalBakauheni;
 
+        Log::info("Market Lintasan Eksekutif IFCS -> Merak: {$totalMerak}, Bakauheni: {$totalBakauheni}, Gabungan: {$totalGabungan}");
+
         market_lintasan::updateOrCreate(
             ['golongan' => 'Logistik IFCS', 'jenis' => 'ifcs', 'tahun' => $tahun],
             [
@@ -683,6 +852,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Market Lintasan untuk Logistik Eksekutif IFCS.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataLogistikEksekutifIFCS($tahun)
     {
         $merakIVB = pelabuhan_merak::where('golongan', 'IVB')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
@@ -713,6 +886,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Market Lintasan untuk Redeem Eksekutif IFCS.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataRedeemEksekutifIFCS($tahun)
     {
         $merakVA = pelabuhan_merak::where('golongan', 'VA')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
@@ -734,6 +911,10 @@ class DataCalculationService
         );
     }
     
+    /**
+     * Menyimpan data Market Lintasan untuk Logistik Redeem Eksekutif IFCS.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataLogistikRedeemEksekutifIFCS($tahun)
     {
         $merakIVB = pelabuhan_merak::where('golongan', 'IVB')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
@@ -764,6 +945,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data total Market Lintasan untuk IFCS.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataTotalIFCS($tahun)
     {
         $totalMerak = market_lintasan::whereIn('golongan', ['Logistik IFCS', 'Logistik Eksekutif IFCS', 'Redeem Eksekutif IFCS', 'Logistik Redeem Eksekutif IFCS'])
@@ -791,7 +976,12 @@ class DataCalculationService
         );
     }    
  
-    //INDUSTRI
+    //Bagian INDUSTRI Market Lintasan
+
+    /**
+     * Menyimpan data Market Lintasan untuk Kendaraan Bus Reguler.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataBusReguler($tahun)
     {
         $merakVA = pelabuhan_merak::where('golongan', 'VA')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
@@ -813,6 +1003,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Market Lintasan untuk Logistik Reguler.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataLogistikReguler($tahun)
     {
         $merakIVB = pelabuhan_merak::where('golongan', 'IVB')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
@@ -843,6 +1037,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data Market Lintasan untuk Logistik Eksekutif Non IFCS.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataEksekkutifNonIFCS($tahun)
     {
         $merakIVB = pelabuhan_merak::where('golongan', 'IVB')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
@@ -873,6 +1071,10 @@ class DataCalculationService
         );
     }
     
+    /**
+     * Menyimpan data Market Lintasan untuk Eksekutif Non IFCS.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataEksekutifNonIFCS($tahun)
     {
         $merakVA = pelabuhan_merak::where('golongan', 'VA')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
@@ -894,6 +1096,10 @@ class DataCalculationService
         );
     }
 
+    /**
+     * Menyimpan data total Market Lintasan untuk INDUSTRI.
+     * @param int $tahun Tahun data.
+     */
     private function simpanDataTotalINDUSTRI($tahun)
     {
         $totalMerak = market_lintasan::whereIn('golongan', ['Kendaraan Bus Reguler', 'Logistik Reguler', 'Logistik Eksekutif Non IFCS', 'Eksekutif Non IFCS'])
