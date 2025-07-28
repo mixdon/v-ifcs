@@ -73,10 +73,10 @@ Route::middleware('auth')->group(function () {
         Route::delete('/kinerja-ifcs/{id}/delete', [kinerjaIFCSController::class, 'delete'])->name('kinerja-ifcs.delete');
 
         // Komposisi Segmen
-        Route::get('/komposisi-segmen', [komposisiSegmenController::class, 'index'])->name('komposisi.index');
+        Route::get('/market-lintasan/calculate/{tahun}', [marketLintasanController::class, 'runCalculationsForYear']);
 
         // Market Lintasan
-        Route::get('/market-lintasan', [marketLintasanController::class, 'index'])->name('market-lintasan.index');
+        Route::get('/komposisi-segmen/calculate/{tahun}', [komposisiSegmenController::class, 'runCalculationsForYear']);
 
         // Laba Kapal
         Route::get('/laba-kapal', [labaKapalController::class, 'index'])->name('laba-kapal.index');
