@@ -16,7 +16,7 @@ class marketLintasanController extends Controller
 
     $years = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
 
-    // Tidak ada lagi logika perhitungan di sini
+    // Hanya mengambil data untuk ditampilkan
     $market_lintasan = market_lintasan::whereIn('tahun', $years)->get();
 
     return view('ifcs.market-lintasan', [

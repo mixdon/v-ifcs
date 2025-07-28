@@ -11,7 +11,9 @@ class DataCalculationService
 {
     public function calculateAllForYear($tahun)
     {
+        // Panggil fungsi perhitungan untuk Komposisi Segmen
         $this->calculateKomposisiSegmen($tahun);
+        // Panggil fungsi perhitungan untuk Market Lintasan
         $this->calculateMarketLintasan($tahun);
     }
 
@@ -245,7 +247,7 @@ class DataCalculationService
     private function simpanDataBakauheniIVA($tahun)
     {
         $ifcsIVA = pelabuhan_bakauheni::where('golongan', 'IVA')->where('jenis', 'ifcs')->where('tahun', $tahun)->sum('total');
-        $redeemIVA = pelabuhan_bakauheni::where('golongan', 'VIA')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
+        $redeemIVA = pelabuhan_bakauheni::where('golongan', 'IVA')->where('jenis', 'redeem')->where('tahun', $tahun)->sum('total');
         $totalIFCSRedeemIVA = $ifcsIVA + $redeemIVA;
         $nonifcsIVA = pelabuhan_bakauheni::where('golongan', 'IVA')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
         $total = $totalIFCSRedeemIVA + $nonifcsIVA;
@@ -766,14 +768,17 @@ class DataCalculationService
     {
         $totalMerak = market_lintasan::whereIn('golongan', ['Logistik IFCS', 'Logistik Eksekutif IFCS', 'Redeem Eksekutif IFCS', 'Logistik Redeem Eksekutif IFCS'])
             ->where('tahun', $tahun)
+            ->where('jenis', 'ifcs')
             ->sum('merak');
         
         $totalBakauheni = market_lintasan::whereIn('golongan', ['Logistik IFCS', 'Logistik Eksekutif IFCS', 'Redeem Eksekutif IFCS', 'Logistik Redeem Eksekutif IFCS'])
             ->where('tahun', $tahun)
+            ->where('jenis', 'ifcs')
             ->sum('bakauheni');
             
         $totalGabungan = market_lintasan::whereIn('golongan', ['Logistik IFCS', 'Logistik Eksekutif IFCS', 'Redeem Eksekutif IFCS', 'Logistik Redeem Eksekutif IFCS'])
             ->where('tahun', $tahun)
+            ->where('jenis', 'ifcs')
             ->sum('gabungan');
 
         market_lintasan::updateOrCreate(
@@ -893,14 +898,17 @@ class DataCalculationService
     {
         $totalMerak = market_lintasan::whereIn('golongan', ['Kendaraan Bus Reguler', 'Logistik Reguler', 'Logistik Eksekutif Non IFCS', 'Eksekutif Non IFCS'])
             ->where('tahun', $tahun)
+            ->where('jenis', 'industri')
             ->sum('merak');
         
         $totalBakauheni = market_lintasan::whereIn('golongan', ['Kendaraan Bus Reguler', 'Logistik Reguler', 'Logistik Eksekutif Non IFCS', 'Eksekutif Non IFCS'])
             ->where('tahun', $tahun)
+            ->where('jenis', 'industri')
             ->sum('bakauheni');
             
         $totalGabungan = market_lintasan::whereIn('golongan', ['Kendaraan Bus Reguler', 'Logistik Reguler', 'Logistik Eksekutif Non IFCS', 'Eksekutif Non IFCS'])
             ->where('tahun', $tahun)
+            ->where('jenis', 'industri')
             ->sum('gabungan');
 
         market_lintasan::updateOrCreate(

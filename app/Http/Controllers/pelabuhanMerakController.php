@@ -5,10 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\pelabuhan_merak;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 use League\Csv\Reader;
 use League\Csv\Statement;
 use App\Services\DataWarehouseService;
-use App\Services\DataCalculationService;
+use App\Services\DataCalculationService; // Tambahkan ini
 
 class pelabuhanMerakController extends Controller
 {
@@ -22,7 +23,9 @@ class pelabuhanMerakController extends Controller
         $selectedTab = $request->input('tab', 'IFCS'); 
     
         if ($tahun && in_array($tahun, $validYears)) {
-            // Perhitungan sekarang dipicu oleh tombol "Proses Data"
+            // Memastikan data total dihitung saat halaman dimuat
+            $dataCalculationService = new DataCalculationService();
+            $dataCalculationService->calculateAllForYear($tahun);
             $years = [$tahun];
         } else {
             $years = $validYears;
@@ -52,7 +55,7 @@ class pelabuhanMerakController extends Controller
             $etlService = new DataWarehouseService();
             $etlService->runEtlForYear($targetYear);
             
-            // Panggil service untuk melakukan semua perhitungan data gabungan
+            // Panggil service baru untuk melakukan semua perhitungan
             $dataCalculationService = new DataCalculationService();
             $dataCalculationService->calculateAllForYear($targetYear);
 
@@ -60,6 +63,12 @@ class pelabuhanMerakController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('etl_merak_gagal', "Terjadi kesalahan saat menjalankan ETL: " . $e->getMessage());
         }
+    }
+
+    public function edit($id)
+    {
+        $record = pelabuhan_merak::findOrFail($id);
+        return view('pelabuhan.edit-merak', compact('record'));
     }
 
     public function updatePost(Request $request, $id)
@@ -88,6 +97,7 @@ class pelabuhanMerakController extends Controller
             $tahunRedirect = $record->tahun; 
             $jenisRedirect = strtoupper($record->jenis);
 
+            // Panggil service untuk recalculate semua data
             $dataCalculationService = new DataCalculationService();
             $dataCalculationService->calculateAllForYear($tahunRedirect);
 
@@ -139,6 +149,7 @@ class pelabuhanMerakController extends Controller
 
             $uniqueUploadedYears = array_unique($uploadedYears);
             foreach ($uniqueUploadedYears as $tahun) {
+                // Panggil service untuk recalculate semua data
                 $dataCalculationService = new DataCalculationService();
                 $dataCalculationService->calculateAllForYear($tahun);
             }
@@ -157,6 +168,7 @@ class pelabuhanMerakController extends Controller
             $jenisAffected = $record->jenis;
 
             if ($record->delete()) {
+                // Panggil service untuk recalculate semua data
                 $dataCalculationService = new DataCalculationService();
                 $dataCalculationService->calculateAllForYear($tahunAffected);
                 
@@ -171,4 +183,5 @@ class pelabuhanMerakController extends Controller
             return redirect()->back()->with('delete_merak_fail', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+
 }

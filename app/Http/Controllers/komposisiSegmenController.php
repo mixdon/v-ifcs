@@ -16,7 +16,7 @@ class komposisiSegmenController extends Controller
 
     $years = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
 
-    // Tidak ada lagi logika perhitungan di sini
+    // Hanya mengambil data untuk ditampilkan
     $komposisi_segmen = komposisi_segmen::whereIn('tahun', $years)->get();
 
     return view('ifcs.komposisi-segmen', [
