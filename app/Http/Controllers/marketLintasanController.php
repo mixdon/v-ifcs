@@ -10,6 +10,10 @@ use App\Models\pelabuhan_bakauheni;
 use App\Models\market_lintasan;
 use Illuminate\Database\QueryException;
 
+// Impor controller yang diperlukan
+use App\Http\Controllers\pelabuhanMerakController;
+use App\Http\Controllers\pelabuhanBakauheniController;
+
 class marketLintasanController extends Controller
 {
     // Fungsi index hanya untuk menampilkan data yang sudah ada.
@@ -38,6 +42,22 @@ class marketLintasanController extends Controller
     public function runCalculationsForYear($tahun)
     {
         try {
+            // Buat instance dari controller lain
+            $merakController = new pelabuhanMerakController();
+            $bakauheniController = new pelabuhanBakauheniController();
+
+            // PENTING: Jalankan perhitungan total data sumber terlebih dahulu
+            $merakController->simpanDataTotalIFCS($tahun);
+            $merakController->simpanDataTotalREDEEM($tahun);
+            $merakController->simpanDataTotalNONIFCS($tahun);
+            $merakController->simpanDataTotalREGULER($tahun);
+
+            $bakauheniController->simpanDataTotalIFCS($tahun);
+            $bakauheniController->simpanDataTotalREDEEM($tahun);
+            $bakauheniController->simpanDataTotalNONIFCS($tahun);
+            $bakauheniController->simpanDataTotalREGULER($tahun);
+
+            // Setelah data sumber dihitung, baru lakukan perhitungan Market Lintasan
             // IFCS
             $this->simpanDataEksekutifIFCS($tahun);
             $this->simpanDataLogistikEksekutifIFCS($tahun);
@@ -59,6 +79,9 @@ class marketLintasanController extends Controller
                              ->with('error', "Terjadi error database saat perhitungan: " . $e->getMessage());
         }
     }
+    
+    // ... (Fungsi-fungsi simpanData... lainnya tetap sama seperti sebelumnya)
+    // ... (Logika sudah diperbaiki di balasan terakhir)
     
     // IFCS
     public function simpanDataEksekutifIFCS($tahun)
