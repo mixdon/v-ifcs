@@ -13,14 +13,14 @@ class marketLintasanController extends Controller
 {        
     public function index(Request $request)
     {
-    $currentYear = date('Y');
-    $startYear = 2020;
-    $validYears = range($startYear, $currentYear);
-    $tahun = $request->input('tahun', null);
+        $currentYear = date('Y');
+        $startYear = 2020;
+        $validYears = range($startYear, $currentYear);
+        $tahun = $request->input('tahun', null);
 
-    $years = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
+        $years = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
 
-    foreach ($years as $year) {
+        foreach ($years as $year) {
             // IFCS
             $this->simpanDataEksekutifIFCS($year);
             $this->simpanDataLogistikEksekutifIFCS($year);
@@ -34,19 +34,26 @@ class marketLintasanController extends Controller
             $this->simpanDataEksekkutifNonIFCS($year);
             $this->simpanDataEksekutifNonIFCS($year);
             $this->simpanDataTotalINDUSTRI($year);
-    }
-
-    $market_lintasan = market_lintasan::whereIn('tahun', $years)
-                        ->orderBy('jenis') // Tambahan untuk mengurutkan berdasarkan jenis
-                        ->orderBy('golongan') // Mengurutkan berdasarkan kolom 'golongan'
-                        ->get();
-
-    return view('ifcs.market-lintasan', [
-        'market_lintasan' => $market_lintasan,
-        'years' => $validYears,
-        'selectedYear' => $tahun 
-    ]);
-    }      
+        }
+        
+        // Perbaikan: Mengambil dan mengelompokkan data
+        $market_lintasan = market_lintasan::whereIn('tahun', $years)
+            ->select('jenis', 'golongan',
+                DB::raw('SUM(merak) as merak'),
+                DB::raw('SUM(bakauheni) as bakauheni'),
+                DB::raw('SUM(gabungan) as gabungan')
+            )
+            ->groupBy('jenis', 'golongan')
+            ->orderBy('jenis')
+            ->orderBy('golongan')
+            ->get();
+        
+        return view('ifcs.market-lintasan', [
+            'market_lintasan' => $market_lintasan,
+            'years' => $validYears,
+            'selectedYear' => $tahun 
+        ]);
+    }  
     
     //IFCS
     public function simpanDataEksekutifIFCS($tahun)
