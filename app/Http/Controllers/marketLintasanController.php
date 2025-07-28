@@ -12,7 +12,7 @@ use Illuminate\Database\QueryException;
 
 class marketLintasanController extends Controller
 {
-    // Fungsi index sekarang hanya mengambil dan menampilkan data yang sudah ada.
+    // Fungsi index sekarang akan memicu perhitungan setiap kali diakses
     public function index(Request $request)
     {
         $currentYear = date('Y');
@@ -22,7 +22,24 @@ class marketLintasanController extends Controller
         $yearsToFetch = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
 
         try {
-            // Data diambil langsung dari tabel market_lintasan
+            // Logika perhitungan dikembalikan ke dalam fungsi index
+            foreach ($yearsToFetch as $year) {
+                // IFCS
+                $this->simpanDataEksekutifIFCS($year);
+                $this->simpanDataLogistikEksekutifIFCS($year);
+                $this->simpanDataRedeemEksekutifIFCS($year);
+                $this->simpanDataLogistikRedeemEksekutifIFCS($year);
+                $this->simpanDataTotalIFCS($year);
+            
+                // INDUSTRI
+                $this->simpanDataBusReguler($year);
+                $this->simpanDataLogistikReguler($year);
+                $this->simpanDataEksekutifNonIFCS($year);
+                $this->simpanDataLogistikEksekutifNonIFCS($year);
+                $this->simpanDataTotalINDUSTRI($year);
+            }
+
+            // Setelah perhitungan selesai, ambil data untuk ditampilkan
             $market_lintasan = market_lintasan::whereIn('tahun', $yearsToFetch)->get();
 
             return view('ifcs.market-lintasan', [
@@ -31,6 +48,7 @@ class marketLintasanController extends Controller
                 'selectedYear' => $tahun 
             ]);
         } catch (QueryException $e) {
+            // Tampilan pesan error jika terjadi masalah pada database saat perhitungan
             return redirect()->route('market-lintasan.index')->with('error', 'Terjadi error database: ' . $e->getMessage());
         }
     }
@@ -197,23 +215,5 @@ class marketLintasanController extends Controller
                 'gabungan' => $gabunganTotal,
             ]
         );
-    }  
-
-    // Fungsi untuk memicu semua perhitungan (gunakan ini secara manual atau via artisan command)
-    public function runCalculationsForYear($tahun)
-    {
-        // IFCS
-        $this->simpanDataEksekutifIFCS($tahun);
-        $this->simpanDataLogistikEksekutifIFCS($tahun);
-        $this->simpanDataRedeemEksekutifIFCS($tahun);
-        $this->simpanDataLogistikRedeemEksekutifIFCS($tahun);
-        $this->simpanDataTotalIFCS($tahun);
-    
-        // INDUSTRI
-        $this->simpanDataBusReguler($tahun);
-        $this->simpanDataLogistikReguler($tahun);
-        $this->simpanDataEksekutifNonIFCS($tahun);
-        $this->simpanDataLogistikEksekutifNonIFCS($tahun);
-        $this->simpanDataTotalINDUSTRI($tahun);
     }
 }
