@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\KinerjaIfcs; // Asumsi model KinerjaIfcs
+use App\Models\kinerja_ifcs;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -19,14 +19,14 @@ class kinerjaIFCSController extends Controller
     public function index(Request $request)
     {
         // Ambil daftar tahun unik dari database untuk filter
-        $years = KinerjaIfcs::select(DB::raw('YEAR(created_at) as year'))
+        $years = kinerja_ifcs::select(DB::raw('YEAR(created_at) as year'))
                             ->distinct()
                             ->orderBy('year', 'desc')
                             ->pluck('year');
         
         $selectedYear = $request->input('tahun');
 
-        $query = KinerjaIfcs::query();
+        $query = kinerja_ifcs::query();
 
         if ($selectedYear) {
             $query->where(DB::raw('YEAR(created_at)'), $selectedYear);
@@ -80,7 +80,7 @@ class kinerjaIFCSController extends Controller
                 }
 
                 // Buat atau perbarui record
-                KinerjaIfcs::updateOrCreate(
+                kinerja_ifcs::updateOrCreate(
                     [
                         'golongan' => $golongan,
                         'tahun' => date('Y') // Asumsi tahun saat ini
@@ -144,7 +144,7 @@ class kinerjaIFCSController extends Controller
         }
 
         try {
-            $kinerja = KinerjaIfcs::findOrFail($id);
+            $kinerja = kinerja_ifcs::findOrFail($id);
 
             // Hitung ulang total dari data bulanan yang baru
             $total = (int) $request->januari + (int) $request->februari + (int) $request->maret +
@@ -187,7 +187,7 @@ class kinerjaIFCSController extends Controller
     public function delete($id)
     {
         try {
-            $kinerja = KinerjaIfcs::findOrFail($id);
+            $kinerja = kinerja_ifcs::findOrFail($id);
             $kinerja->delete();
 
             return redirect()->back()->with('delete_kinerja_ifcs_success', 'Data Kinerja IFCS berhasil dihapus.');
