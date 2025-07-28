@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\kinerja_ifcs;
+use App\Models\kinerja_ifcs; // Menggunakan nama model 'kinerja_ifcs'
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Exception;
 
-class kinerjaIFCSController extends Controller
+class KinerjaIfcsController extends Controller
 {
     /**
      * Menampilkan halaman data Kinerja IFCS dengan filter tahun.
