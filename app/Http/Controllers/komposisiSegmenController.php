@@ -12,7 +12,7 @@ use Illuminate\Database\QueryException;
 
 class komposisiSegmenController extends Controller
 {
-    // Fungsi index sekarang akan memicu perhitungan setiap kali diakses
+    // Fungsi index hanya untuk menampilkan data yang sudah ada.
     public function index(Request $request)
     {
         $currentYear = date('Y');
@@ -22,46 +22,6 @@ class komposisiSegmenController extends Controller
         $yearsToFetch = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
 
         try {
-            // Logika perhitungan dikembalikan ke dalam fungsi index
-            foreach ($yearsToFetch as $year) {
-                // Merak
-                $this->simpanDataMerakIVA($year);
-                $this->simpanDataMerakIVB($year);
-                $this->simpanDataMerakVA($year);
-                $this->simpanDataMerakVB($year);
-                $this->simpanDataMerakVIA($year);
-                $this->simpanDataMerakVIB($year);
-                $this->simpanDataMerakVII($year);
-                $this->simpanDataMerakVIII($year);
-                $this->simpanDataMerakIX($year);
-                $this->simpanDataTotalMerak($year);
-
-                // Bakauheni
-                $this->simpanDataBakauheniIVA($year);
-                $this->simpanDataBakauheniIVB($year);
-                $this->simpanDataBakauheniVA($year);
-                $this->simpanDataBakauheniVB($year);
-                $this->simpanDataBakauheniVIA($year);
-                $this->simpanDataBakauheniVIB($year);
-                $this->simpanDataBakauheniVII($year);
-                $this->simpanDataBakauheniVIII($year);
-                $this->simpanDataBakauheniIX($year);
-                $this->simpanDataTotalBakauheni($year);
-
-                // Gabungan
-                $this->simpanDataGabunganIVA($year);
-                $this->simpanDataGabunganIVB($year);
-                $this->simpanDataGabunganVA($year);
-                $this->simpanDataGabunganVB($year);
-                $this->simpanDataGabunganVIA($year);
-                $this->simpanDataGabunganVIB($year);
-                $this->simpanDataGabunganVII($year);
-                $this->simpanDataGabunganVIII($year);
-                $this->simpanDataGabunganIX($year);
-                $this->simpanDataTotalGabungan($year);
-            }
-            
-            // Setelah perhitungan selesai, ambil data untuk ditampilkan
             $komposisi_segmen = komposisi_segmen::whereIn('tahun', $yearsToFetch)->get();
 
             return view('ifcs.komposisi-segmen', [
@@ -70,8 +30,55 @@ class komposisiSegmenController extends Controller
                 'selectedYear' => $tahun 
             ]);
         } catch (QueryException $e) {
-            // Tampilan pesan error jika terjadi masalah pada database saat perhitungan
             return redirect()->route('komposisi.index')->with('error', 'Terjadi error database: ' . $e->getMessage());
+        }
+    }
+
+    // Fungsi untuk memicu semua perhitungan dan menyimpan hasilnya
+    public function runCalculationsForYear($tahun)
+    {
+        try {
+            // Merak
+            $this->simpanDataMerakIVA($tahun);
+            $this->simpanDataMerakIVB($tahun);
+            $this->simpanDataMerakVA($tahun);
+            $this->simpanDataMerakVB($tahun);
+            $this->simpanDataMerakVIA($tahun);
+            $this->simpanDataMerakVIB($tahun);
+            $this->simpanDataMerakVII($tahun);
+            $this->simpanDataMerakVIII($tahun);
+            $this->simpanDataMerakIX($tahun);
+            $this->simpanDataTotalMerak($tahun);
+
+            // Bakauheni
+            $this->simpanDataBakauheniIVA($tahun);
+            $this->simpanDataBakauheniIVB($tahun);
+            $this->simpanDataBakauheniVA($tahun);
+            $this->simpanDataBakauheniVB($tahun);
+            $this->simpanDataBakauheniVIA($tahun);
+            $this->simpanDataBakauheniVIB($tahun);
+            $this->simpanDataBakauheniVII($tahun);
+            $this->simpanDataBakauheniVIII($tahun);
+            $this->simpanDataBakauheniIX($tahun);
+            $this->simpanDataTotalBakauheni($tahun);
+
+            // Gabungan
+            $this->simpanDataGabunganIVA($tahun);
+            $this->simpanDataGabunganIVB($tahun);
+            $this->simpanDataGabunganVA($tahun);
+            $this->simpanDataGabunganVB($tahun);
+            $this->simpanDataGabunganVIA($tahun);
+            $this->simpanDataGabunganVIB($tahun);
+            $this->simpanDataGabunganVII($tahun);
+            $this->simpanDataGabunganVIII($tahun);
+            $this->simpanDataGabunganIX($tahun);
+            $this->simpanDataTotalGabungan($tahun);
+
+            return redirect()->route('komposisi.index', ['tahun' => $tahun])
+                             ->with('success', "Perhitungan data Komposisi Segmen untuk tahun {$tahun} berhasil.");
+        } catch (QueryException $e) {
+            return redirect()->route('komposisi.index', ['tahun' => $tahun])
+                             ->with('error', "Terjadi error database saat perhitungan: " . $e->getMessage());
         }
     }
     

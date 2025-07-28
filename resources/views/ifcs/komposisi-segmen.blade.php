@@ -13,7 +13,7 @@
                     <div class="col-sm-1">
                         <div class="form-group mb-2">
                             <label for="tahunDropdown">Pilih Tahun:</label>
-                            <form action="{{ route('komposisi.index') }}" method="GET">
+                            <form id="yearForm" action="{{ route('komposisi.index') }}" method="GET">
                                 <div class="d-flex align-items-center">
                                     <select name="tahun" class="form-control" id="tahunDropdown"
                                         onchange="this.form.submit()">
@@ -27,6 +27,22 @@
                             </form>
                         </div>
                     </div>
+                    
+                    {{-- Tombol untuk memicu perhitungan data --}}
+                    <div class="mb-3">
+                        <a href="{{ route('komposisi.calculate', ['tahun' => $selectedYear ?? date('Y')]) }}" 
+                           class="btn btn-info" id="calculateButtonKomposisi">
+                            Trigger Perhitungan Data
+                        </a>
+                    </div>
+                    
+                    {{-- Tampilkan notifikasi jika ada --}}
+                    @if (session('success'))
+                        <div class="alert alert-success">{{ session('success') }}</div>
+                    @endif
+                    @if (session('error'))
+                        <div class="alert alert-danger">{{ session('error') }}</div>
+                    @endif
 
                     <ul class="nav nav-tabs" id="tabMenu1">
                         <li class="nav-item">
@@ -225,6 +241,27 @@
                             if (activeElement1) {
                                 activateTab(activeElement1, new Event('click'), 'tab1');
                             }
+                            
+                            // Memastikan href tombol sudah benar saat halaman pertama kali dimuat
+                            const initialSelectedYear = "{{ $selectedYear }}";
+                            const calculateButton = document.getElementById('calculateButtonKomposisi');
+                            if (initialSelectedYear) {
+                                calculateButton.href = "{{ url('komposisi-segmen/calculate') }}/" + initialSelectedYear;
+                                calculateButton.style.display = '';
+                            } else {
+                                calculateButton.style.display = 'none';
+                            }
+
+                            // Memperbarui href tombol saat dropdown tahun berubah
+                            document.getElementById('tahunDropdown').addEventListener('change', function() {
+                                var selectedYear = this.value;
+                                if (selectedYear) {
+                                    calculateButton.href = "{{ url('komposisi-segmen/calculate') }}/" + selectedYear;
+                                    calculateButton.style.display = '';
+                                } else {
+                                    calculateButton.style.display = 'none';
+                                }
+                            });
                         });
 
                         function activateTab(clickedElement, event, tabGroup) {

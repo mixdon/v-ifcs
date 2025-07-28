@@ -12,7 +12,7 @@ use Illuminate\Database\QueryException;
 
 class marketLintasanController extends Controller
 {
-    // Fungsi index sekarang akan memicu perhitungan setiap kali diakses
+    // Fungsi index hanya untuk menampilkan data yang sudah ada.
     public function index(Request $request)
     {
         $currentYear = date('Y');
@@ -22,24 +22,6 @@ class marketLintasanController extends Controller
         $yearsToFetch = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
 
         try {
-            // Logika perhitungan dikembalikan ke dalam fungsi index
-            foreach ($yearsToFetch as $year) {
-                // IFCS
-                $this->simpanDataEksekutifIFCS($year);
-                $this->simpanDataLogistikEksekutifIFCS($year);
-                $this->simpanDataRedeemEksekutifIFCS($year);
-                $this->simpanDataLogistikRedeemEksekutifIFCS($year);
-                $this->simpanDataTotalIFCS($year);
-            
-                // INDUSTRI
-                $this->simpanDataBusReguler($year);
-                $this->simpanDataLogistikReguler($year);
-                $this->simpanDataEksekutifNonIFCS($year);
-                $this->simpanDataLogistikEksekutifNonIFCS($year);
-                $this->simpanDataTotalINDUSTRI($year);
-            }
-
-            // Setelah perhitungan selesai, ambil data untuk ditampilkan
             $market_lintasan = market_lintasan::whereIn('tahun', $yearsToFetch)->get();
 
             return view('ifcs.market-lintasan', [
@@ -48,8 +30,33 @@ class marketLintasanController extends Controller
                 'selectedYear' => $tahun 
             ]);
         } catch (QueryException $e) {
-            // Tampilan pesan error jika terjadi masalah pada database saat perhitungan
             return redirect()->route('market-lintasan.index')->with('error', 'Terjadi error database: ' . $e->getMessage());
+        }
+    }
+    
+    // Fungsi untuk memicu semua perhitungan dan menyimpan hasilnya
+    public function runCalculationsForYear($tahun)
+    {
+        try {
+            // IFCS
+            $this->simpanDataEksekutifIFCS($tahun);
+            $this->simpanDataLogistikEksekutifIFCS($tahun);
+            $this->simpanDataRedeemEksekutifIFCS($tahun);
+            $this->simpanDataLogistikRedeemEksekutifIFCS($tahun);
+            $this->simpanDataTotalIFCS($tahun);
+        
+            // INDUSTRI
+            $this->simpanDataBusReguler($tahun);
+            $this->simpanDataLogistikReguler($tahun);
+            $this->simpanDataEksekutifNonIFCS($tahun);
+            $this->simpanDataLogistikEksekutifNonIFCS($tahun);
+            $this->simpanDataTotalINDUSTRI($tahun);
+
+            return redirect()->route('market-lintasan.index', ['tahun' => $tahun])
+                             ->with('success', "Perhitungan data Market Lintasan untuk tahun {$tahun} berhasil.");
+        } catch (QueryException $e) {
+            return redirect()->route('market-lintasan.index', ['tahun' => $tahun])
+                             ->with('error', "Terjadi error database saat perhitungan: " . $e->getMessage());
         }
     }
     

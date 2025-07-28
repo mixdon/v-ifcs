@@ -13,10 +13,9 @@
                     <div class="col-sm-1">
                         <div class="form-group mb-2">
                             <label for="tahunDropdown">Pilih Tahun:</label>
-                            <form action="{{ route('market-lintasan.index') }}" method="GET">
+                            <form id="yearForm" action="{{ route('market-lintasan.index') }}" method="GET">
                                 <div class="d-flex align-items-center">
-                                    <select name="tahun" class="form-control" id="tahunDropdown"
-                                        onchange="this.form.submit()">
+                                    <select name="tahun" class="form-control" id="tahunDropdown" onchange="this.form.submit()">
                                         <option value="">Select All</option>
                                         @foreach($years as $year)
                                         <option value="{{ $year }}" {{ $selectedYear == $year ? 'selected' : '' }}>
@@ -27,6 +26,23 @@
                             </form>
                         </div>
                     </div>
+
+                    {{-- Tombol untuk memicu perhitungan data --}}
+                    <div class="mb-3">
+                        <a href="{{ route('market-lintasan.calculate', ['tahun' => $selectedYear ?? date('Y')]) }}" 
+                           class="btn btn-info" id="calculateButton">
+                            Trigger Perhitungan Data
+                        </a>
+                    </div>
+                    
+                    {{-- Tampilkan notifikasi jika ada --}}
+                    @if (session('success'))
+                        <div class="alert alert-success">{{ session('success') }}</div>
+                    @endif
+                    @if (session('error'))
+                        <div class="alert alert-danger">{{ session('error') }}</div>
+                    @endif
+
                     <ul class="nav nav-tabs" id="tabMenu1">
                         <li class="nav-item">
                             <a class="nav-link active" href="#IFCS"
@@ -162,32 +178,25 @@
                 break;
             }
         }
-    });
-
-    document.addEventListener('DOMContentLoaded', function () {
-        var activeTab1 = localStorage.getItem('activeTab1');
-        if (!activeTab1) {
-            activeTab1 = '#IFCS';
-            localStorage.setItem('activeTab1', activeTab1);
-        }
         
-        var activeElement1 = document.querySelector('[href="' + activeTab1 + '"]');
-        if (activeElement1) {
-            activateTab(activeElement1, new Event('click'), 'tab1');
+        // Memastikan href tombol sudah benar saat halaman pertama kali dimuat
+        const initialSelectedYear = "{{ $selectedYear }}";
+        const calculateButton = document.getElementById('calculateButton');
+        if (initialSelectedYear) {
+            calculateButton.href = "{{ url('market-lintasan/calculate') }}/" + initialSelectedYear;
+        } else {
+            calculateButton.style.display = 'none';
         }
 
-        const buttons = document.querySelectorAll('.btn-delete');
-        buttons.forEach(button => {
-            button.addEventListener('click', function () {
-                const confirmDelete = confirm('Apakah Anda yakin ingin menghapus data ini?');
-                if (confirmDelete) {
-                    const formId = this.getAttribute('data-id');
-                    const form = document.getElementById('form-delete-' + formId);
-                    if (form) {
-                        form.submit();
-                    }
-                }
-            });
+        // Memperbarui href tombol saat dropdown tahun berubah
+        document.getElementById('tahunDropdown').addEventListener('change', function() {
+            var selectedYear = this.value;
+            if (selectedYear) {
+                calculateButton.href = "{{ url('market-lintasan/calculate') }}/" + selectedYear;
+                calculateButton.style.display = '';
+            } else {
+                calculateButton.style.display = 'none';
+            }
         });
     });
 
