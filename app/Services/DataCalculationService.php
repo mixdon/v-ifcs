@@ -11,9 +11,7 @@ class DataCalculationService
 {
     public function calculateAllForYear($tahun)
     {
-        // Panggil fungsi perhitungan untuk Komposisi Segmen
         $this->calculateKomposisiSegmen($tahun);
-        // Panggil fungsi perhitungan untuk Market Lintasan
         $this->calculateMarketLintasan($tahun);
     }
 
