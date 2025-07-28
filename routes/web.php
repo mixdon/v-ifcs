@@ -72,13 +72,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/kinerja-ifcs/uploadcsv', [kinerjaIFCSController::class, 'uploadcsvKinerja'])->name('kinerja-ifcs.uploadcsv');
         Route::delete('/kinerja-ifcs/{id}/delete', [kinerjaIFCSController::class, 'delete'])->name('kinerja-ifcs.delete');
 
-        // Rute untuk Komposisi Segmen
+        // Komposisi Segmen
         Route::get('/komposisi-segmen', [komposisiSegmenController::class, 'index'])->name('komposisi.index');
-        Route::get('/komposisi-segmen/calculate/{tahun}', [komposisiSegmenController::class, 'runCalculationsForYear'])->name('komposisi.calculate');
 
-        // Rute untuk Market Lintasan
+        // Market Lintasan
         Route::get('/market-lintasan', [marketLintasanController::class, 'index'])->name('market-lintasan.index');
-        Route::get('/market-lintasan/calculate/{tahun}', [marketLintasanController::class, 'runCalculationsForYear'])->name('market-lintasan.calculate');
 
         // Laba Kapal
         Route::get('/laba-kapal', [labaKapalController::class, 'index'])->name('laba-kapal.index');

@@ -13,9 +13,10 @@
                     <div class="col-sm-1">
                         <div class="form-group mb-2">
                             <label for="tahunDropdown">Pilih Tahun:</label>
-                            <form id="yearForm" action="{{ route('komposisi.index') }}" method="GET">
+                            <form action="{{ route('komposisi.index') }}" method="GET">
                                 <div class="d-flex align-items-center">
-                                    <select name="tahun" class="form-control" id="tahunDropdown" onchange="this.form.submit()">
+                                    <select name="tahun" class="form-control" id="tahunDropdown"
+                                        onchange="this.form.submit()">
                                         <option value="">Select All</option>
                                         @foreach($years as $year)
                                         <option value="{{ $year }}" {{ $selectedYear == $year ? 'selected' : '' }}>
@@ -25,42 +26,42 @@
                                 </div>
                             </form>
                         </div>
+
+                        <script>
+                            document.addEventListener("DOMContentLoaded", function () {
+                                var selectedYear = "{{ request()->get('tahun') }}";
+
+                                var tahunDropdown = document.getElementById("tahunDropdown");
+
+                                for (var i = 0; i < tahunDropdown.options.length; i++) {
+                                    if (tahunDropdown.options[i].value == selectedYear) {
+                                        tahunDropdown.selectedIndex = i;
+                                        break;
+                                    }
+                                }
+                            });
+
+                        </script>
                     </div>
 
-                    {{-- Tombol untuk memicu perhitungan data --}}
-                    <div class="mb-3">
-                        {{-- Default tahun jika tidak ada yang dipilih adalah tahun saat ini --}}
-                        <a href="{{ route('komposisi.calculate', ['tahun' => $selectedYear ?? date('Y')]) }}"
-                           class="btn btn-info" id="calculateButton">
-                            Trigger Perhitungan Data
-                        </a>
-                    </div>
-                    
-                    {{-- Tampilkan notifikasi jika ada (sukses atau error) --}}
-                    @if (session('success'))
-                        <div class="alert alert-success">{{ session('success') }}</div>
-                    @endif
-                    @if (session('error'))
-                        <div class="alert alert-danger">{{ session('error') }}</div>
-                    @endif
-
-                    <ul class="nav nav-tabs" id="tabMenu">
+                    <ul class="nav nav-tabs" id="tabMenu1">
                         <li class="nav-item">
-                            <a class="nav-link active" href="#merak"
-                                onclick="activateTab(this, event)"><strong>MERAK</strong></a>
+                            <a class="nav-link active" href="#MERAK"
+                                onclick="activateTab(this, event, 'tab1')"><strong>MERAK</strong></a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#bakauheni"
-                                onclick="activateTab(this, event)"><strong>BAKAUHENI</strong></a>
+                            <a class="nav-link" href="#BAKAUHENI"
+                                onclick="activateTab(this, event, 'tab1')"><strong>BAKAUHENI</strong></a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#gabungan"
-                                onclick="activateTab(this, event)"><strong>GABUNGAN</strong></a>
+                            <a class="nav-link" href="#GABUNGAN"
+                                onclick="activateTab(this, event, 'tab1')"><strong>GABUNGAN</strong></a>
                         </li>
                     </ul>
 
                     <div class="tab-content" style="overflow-x: auto;">
-                        <div id="merak" class="tab-pane fade show active">
+                        <div id="MERAK" class="tab-pane fade show active">
+                            <!-- Tabel MERAK -->
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -69,17 +70,21 @@
                                             Golongan
                                         </th>
                                         <th
-                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
-                                            IFCS REDEEM
+                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                            IFCS + REDEEM
                                         </th>
                                         <th
-                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                             NON IFCS
                                         </th>
                                         <th
-                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                            class="text-center text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Total
                                         </th>
+                                        <!-- <th
+                                            class="text-center text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
+                                            Action
+                                        </th> -->
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -90,30 +95,46 @@
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
-                                                {{ $data->golongan }}</p>
+                                                {{ $data->golongan }}
+                                            </p>
                                         </td>
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
-                                                {{ number_format($data->ifcs_redeem, 0, ',', '.') }}</p>
+                                                {{ number_format($data->ifcs_redeem, 0, ',', '.') }}
+                                            </p>
                                         </td>
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
-                                                {{ number_format($data->nonifcs, 0, ',', '.') }}</p>
+                                                {{ number_format($data->nonifcs, 0, ',', '.') }}
+                                            </p>
                                         </td>
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
                                                 {{ number_format($data->total, 0, ',', '.') }}</p>
                                         </td>
+                                        <!-- <td class="text-center">
+                                            <form id="form-delete-{{ $data->id }}"
+                                                action="{{ route('kinerja-ifcs.delete', $data->id) }}" method="POST">
+                                                @csrf @method('DELETE')
+                                                <button type="button" class="mx-2 my-1 btn-delete"
+                                                    style="background-color: transparent; border: none; padding: 0;"
+                                                    data-id="{{ $data->id }}" data-bs-toggle="tooltip"
+                                                    data-bs-original-title="Hapus Data">
+                                                    <i class="cursor-pointer fas fa-trash text-danger fa-sm"></i>
+                                                </button>
+                                            </form>
+                                        </td> -->
                                     </tr>
                                     @endif
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
-                        <div id="bakauheni" class="tab-pane fade">
+                        <div id="BAKAUHENI" class="tab-pane fade">
+                            <!-- Tabel BAKAUHENI -->
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -122,17 +143,21 @@
                                             Golongan
                                         </th>
                                         <th
-                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
-                                            IFCS REDEEM
+                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                            IFCS + REDEEM
                                         </th>
                                         <th
-                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                             NON IFCS
                                         </th>
                                         <th
-                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                            class="text-center text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Total
                                         </th>
+                                        <!-- <th
+                                                class="text-center text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                                Action
+                                            </th> -->
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -143,30 +168,47 @@
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
-                                                {{ $data->golongan }}</p>
+                                                {{ $data->golongan }}
+                                            </p>
                                         </td>
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
-                                                {{ number_format($data->ifcs_redeem, 0, ',', '.') }}</p>
+                                                {{ number_format($data->ifcs_redeem, 0, ',', '.') }}
+                                            </p>
                                         </td>
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
-                                                {{ number_format($data->nonifcs, 0, ',', '.') }}</p>
+                                                {{ number_format($data->nonifcs, 0, ',', '.') }}
+                                            </p>
                                         </td>
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
                                                 {{ number_format($data->total, 0, ',', '.') }}</p>
                                         </td>
+                                        <!-- <td class="text-center">
+                                                <form id="form-delete-{{ $data->id }}"
+                                                    action="{{ route('kinerja-ifcs.delete', $data->id) }}"
+                                                    method="POST">
+                                                    @csrf @method('DELETE')
+                                                    <button type="button" class="mx-2 my-1 btn-delete"
+                                                        style="background-color: transparent; border: none; padding: 0;"
+                                                        data-id="{{ $data->id }}" data-bs-toggle="tooltip"
+                                                        data-bs-original-title="Hapus Data">
+                                                        <i class="cursor-pointer fas fa-trash text-danger fa-sm"></i>
+                                                    </button>
+                                                </form>
+                                            </td> -->
                                     </tr>
                                     @endif
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
-                        <div id="gabungan" class="tab-pane fade">
+                        <div id="GABUNGAN" class="tab-pane fade">
+                            <!-- Tabel GABUNGAN -->
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -175,17 +217,21 @@
                                             Golongan
                                         </th>
                                         <th
-                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
-                                            IFCS REDEEM
+                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                            IFCS + REDEEM
                                         </th>
                                         <th
-                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                             NON IFCS
                                         </th>
                                         <th
-                                            class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                            class="text-center text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Total
                                         </th>
+                                        <!-- <th
+                                                class="text-center text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
+                                                Action
+                                            </th> -->
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -196,23 +242,38 @@
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
-                                                {{ $data->golongan }}</p>
+                                                {{ $data->golongan }}
+                                            </p>
                                         </td>
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
-                                                {{ number_format($data->ifcs_redeem, 0, ',', '.') }}</p>
+                                                {{ number_format($data->ifcs_redeem, 0, ',', '.') }}
+                                            </p>
                                         </td>
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
-                                                {{ number_format($data->nonifcs, 0, ',', '.') }}</p>
+                                                {{ number_format($data->nonifcs, 0, ',', '.') }}
+                                            </p>
                                         </td>
                                         <td class="text-center align-middle">
                                             <p class="text-xs mb-0"
                                                 style="{{ trim($data->golongan) === 'Total' ? 'font-weight: bold;' : '' }}">
                                                 {{ number_format($data->total, 0, ',', '.') }}</p>
                                         </td>
+                                        <!-- <td class="text-center">
+                                            <form id="form-delete-{{ $data->id }}"
+                                                action="{{ route('kinerja-ifcs.delete', $data->id) }}" method="POST">
+                                                @csrf @method('DELETE')
+                                                <button type="button" class="mx-2 my-1 btn-delete"
+                                                    style="background-color: transparent; border: none; padding: 0;"
+                                                    data-id="{{ $data->id }}" data-bs-toggle="tooltip"
+                                                    data-bs-original-title="Hapus Data">
+                                                    <i class="cursor-pointer fas fa-trash text-danger fa-sm"></i>
+                                                </button>
+                                            </form>
+                                        </td> -->
                                     </tr>
                                     @endif
                                     @endforeach
@@ -222,40 +283,17 @@
                     </div>
 
                     <script>
-                        document.addEventListener("DOMContentLoaded", function () {
-                            var selectedYear = "{{ request()->get('tahun') }}";
-                            var tahunDropdown = document.getElementById("tahunDropdown");
-                            for (var i = 0; i < tahunDropdown.options.length; i++) {
-                                if (tahunDropdown.options[i].value == selectedYear) {
-                                    tahunDropdown.selectedIndex = i;
-                                    break;
+                        document.addEventListener('DOMContentLoaded', function () {
+                            var activeTab1 = localStorage.getItem('activeTab1');
+                            if (activeTab1) {
+                                var activeElement1 = document.querySelector('[href="' + activeTab1 + '"]');
+                                if (activeElement1) {
+                                    activateTab(activeElement1, new Event('click'), 'tab1');
                                 }
                             }
-                            
-                            // Memastikan href tombol sudah benar saat halaman pertama kali dimuat
-                            const initialSelectedYear = "{{ $selectedYear }}";
-                            const calculateButton = document.getElementById('calculateButton');
-                            if (initialSelectedYear) {
-                                calculateButton.href = "{{ url('komposisi-segmen/calculate') }}/" + initialSelectedYear;
-                                calculateButton.style.display = ''; // Tampilkan tombol
-                            } else {
-                                // Sembunyikan tombol jika 'Select All' dipilih (tidak ada tahun spesifik)
-                                calculateButton.style.display = 'none'; 
-                            }
-
-                            // Memperbarui href tombol saat dropdown tahun berubah
-                            document.getElementById('tahunDropdown').addEventListener('change', function() {
-                                var selectedYear = this.value;
-                                if (selectedYear) {
-                                    calculateButton.href = "{{ url('komposisi-segmen/calculate') }}/" + selectedYear;
-                                    calculateButton.style.display = ''; // Tampilkan tombol
-                                } else {
-                                    calculateButton.style.display = 'none'; // Sembunyikan tombol
-                                }
-                            });
                         });
 
-                        function activateTab(clickedElement, event) {
+                        function activateTab(clickedElement, event, tabGroup) {
                             event.preventDefault();
 
                             var tabGroupId = clickedElement.closest('.nav-tabs').id;
@@ -268,16 +306,25 @@
 
                             var targetTabId = clickedElement.getAttribute('href');
 
-                            document.querySelectorAll('.tab-content .tab-pane').forEach(function (tab) {
-                                tab.classList.remove('show', 'active');
+                            document.querySelectorAll('.tab-content').forEach(function (content) {
+                                if (content.parentNode.querySelector('.nav-tabs').id === tabGroupId) {
+                                    content.querySelectorAll('.tab-pane').forEach(function (tab) {
+                                        tab.classList.remove('show', 'active');
+                                    });
+                                }
                             });
 
                             document.querySelector(targetTabId).classList.add('show', 'active');
+
+                            localStorage.setItem('activeTab' + tabGroup.trim().charAt(tabGroup.trim().length - 1),
+                                targetTabId);
                         }
+
                     </script>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
 @endsection

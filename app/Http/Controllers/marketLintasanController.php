@@ -8,80 +8,44 @@ use App\Http\Controllers\Controller;
 use App\Models\pelabuhan_merak;
 use App\Models\pelabuhan_bakauheni;
 use App\Models\market_lintasan;
-use Illuminate\Database\QueryException;
-
-// Import controller yang diperlukan untuk memicu perhitungan total pelabuhan
-use App\Http\Controllers\pelabuhanMerakController;
-use App\Http\Controllers\pelabuhanBakauheniController;
 
 class marketLintasanController extends Controller
-{
+{        
     public function index(Request $request)
     {
-        $currentYear = date('Y');
-        $startYear = 2020;
-        $validYears = range($startYear, $currentYear);
-        $tahun = $request->input('tahun', null);
+    $currentYear = date('Y');
+    $startYear = 2020;
+    $validYears = range($startYear, $currentYear);
+    $tahun = $request->input('tahun', null);
 
-        $yearsToProcess = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
+    $years = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
 
-        // Ambil data untuk ditampilkan setelah semua perhitungan (atau jika terjadi error, tampilkan yang ada)
-        $market_lintasan = market_lintasan::whereIn('tahun', $yearsToProcess)->get();
-
-        return view('ifcs.market-lintasan', [
-            'market_lintasan' => $market_lintasan,
-            'years' => $validYears,
-            'selectedYear' => $tahun 
-        ]);
-    }
-    
-    // Metode baru untuk menjalankan perhitungan
-    public function runCalculationsForYear($tahun)
-    {
-        // Pindahkan semua logika perhitungan dari metode index ke sini
-        try {
-            // Inisialisasi controller lain untuk memicu perhitungan total pelabuhan
-            $merakController = new pelabuhanMerakController();
-            $bakauheniController = new pelabuhanBakauheniController();
-
-            // PENTING: Pastikan data total Pelabuhan Merak dihitung terlebih dahulu
-            $merakController->simpanDataTotalIFCS($tahun);
-            $merakController->simpanDataTotalREDEEM($tahun);
-            $merakController->simpanDataTotalNONIFCS($tahun);
-            $merakController->simpanDataTotalREGULER($tahun);
-
-            // PENTING: Pastikan data total Pelabuhan Bakauheni dihitung terlebih dahulu
-            $bakauheniController->simpanDataTotalIFCS($tahun);
-            $bakauheniController->simpanDataTotalREDEEM($tahun);
-            $bakauheniController->simpanDataTotalNONIFCS($tahun);
-            $bakauheniController->simpanDataTotalREGULER($tahun);
-
-            // Setelah data total Merak dan Bakauheni tersedia, baru hitung Market Lintasan
+    foreach ($years as $year) {
             // IFCS
-            $this->simpanDataEksekutifIFCS($tahun);
-            $this->simpanDataLogistikEksekutifIFCS($tahun);
-            $this->simpanDataRedeemEksekutifIFCS($tahun);
-            $this->simpanDataLogistikRedeemEksekutifIFCS($tahun);
-            $this->simpanDataTotalIFCS($tahun);
+            $this->simpanDataEksekutifIFCS($year);
+            $this->simpanDataLogistikEksekutifIFCS($year);
+            $this->simpanDataRedeemEksekutifIFCS($year);
+            $this->simpanDataLogistikRedeemEksekutifIFCS($year);
+            $this->simpanDataTotalIFCS($year);
         
             // INDUSTRI
-            $this->simpanDataBusReguler($tahun);
-            $this->simpanDataLogistikReguler($tahun);
-            $this->simpanDataEksekutifNonIFCS($tahun); // Memperbaiki penamaan fungsi
-            $this->simpanDataLogistikEksekutifNonIFCS($tahun); // Memperbaiki penamaan fungsi
-            $this->simpanDataTotalINDUSTRI($tahun);
-        } catch (QueryException $e) {
-            // Tangkap dan tampilkan error database jika terjadi
-            return redirect()->route('market-lintasan.index', ['tahun' => $tahun])->with('error', 'Terjadi error database saat perhitungan: ' . $e->getMessage());
-        } catch (\Exception $e) {
-            // Tangkap error umum lainnya (misal: kelas tidak ditemukan jika controller lain belum ada)
-            return redirect()->route('market-lintasan.index', ['tahun' => $tahun])->with('error', 'Terjadi kesalahan sistem: ' . $e->getMessage());
-        }
-
-        return redirect()->route('market-lintasan.index', ['tahun' => $tahun])->with('success', 'Perhitungan data Market Lintasan berhasil diselesaikan untuk tahun ' . $tahun . '.');
+            $this->simpanDataBusReguler($year);
+            $this->simpanDataLogistikReguler($year);
+            $this->simpanDataEksekkutifNonIFCS($year);
+            $this->simpanDataEksekutifNonIFCS($year);
+            $this->simpanDataTotalINDUSTRI($year);
     }
 
-    // IFCS
+    $market_lintasan = market_lintasan::whereIn('tahun', $years)->get();
+
+    return view('ifcs.market-lintasan', [
+        'market_lintasan' => $market_lintasan,
+        'years' => $validYears,
+        'selectedYear' => $tahun 
+    ]);
+    }      
+    
+    //IFCS
     public function simpanDataEksekutifIFCS($tahun)
     {
         // Ambil data dari pelabuhan_merak
@@ -101,7 +65,7 @@ class marketLintasanController extends Controller
 
         // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
-            ['golongan' => 'Eksekutif IFCS', 'jenis' => 'ifcs', 'tahun' => $tahun],
+            ['golongan' => 'Logistik IFCS', 'jenis' => 'ifcs', 'tahun' => $tahun],
             [
                 'merak' => $totalMerak,
                 'bakauheni' => $totalBakauheni,
@@ -158,6 +122,7 @@ class marketLintasanController extends Controller
         // Hitung total gabungan
         $totalGabungan = $totalMerak + $totalBakauheni;
 
+
         // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
             ['golongan' => 'Redeem Eksekutif IFCS', 'jenis' => 'ifcs','tahun' => $tahun],
@@ -194,6 +159,7 @@ class marketLintasanController extends Controller
         // Hitung total gabungan
         $totalGabungan = $totalMerak + $totalBakauheni;
 
+
         // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
             ['golongan' => 'Logistik Redeem Eksekutif IFCS','jenis' => 'ifcs','tahun' => $tahun],
@@ -208,19 +174,19 @@ class marketLintasanController extends Controller
     public function simpanDataTotalIFCS($tahun)
     {
         // Ambil data untuk kolom 'merak'
-        $merak1 = market_lintasan::where('golongan', 'Eksekutif IFCS')->where('tahun', $tahun)->sum('merak');
+        $merak1 = market_lintasan::where('golongan', 'Logistik IFCS')->where('tahun', $tahun)->sum('merak');
         $merak2 = market_lintasan::where('golongan', 'Logistik Eksekutif IFCS')->where('tahun', $tahun)->sum('merak');
         $merak3 = market_lintasan::where('golongan', 'Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('merak');
         $merak4 = market_lintasan::where('golongan', 'Logistik Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('merak');
     
         // Ambil data untuk kolom 'bakauheni'
-        $bakauheni1 = market_lintasan::where('golongan', 'Eksekutif IFCS')->where('tahun', $tahun)->sum('bakauheni');
+        $bakauheni1 = market_lintasan::where('golongan', 'Logistik IFCS')->where('tahun', $tahun)->sum('bakauheni');
         $bakauheni2 = market_lintasan::where('golongan', 'Logistik Eksekutif IFCS')->where('tahun', $tahun)->sum('bakauheni');
         $bakauheni3 = market_lintasan::where('golongan', 'Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('bakauheni');
         $bakauheni4 = market_lintasan::where('golongan', 'Logistik Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('bakauheni');
     
         // Ambil data untuk kolom 'gabungan'
-        $gabungan1 = market_lintasan::where('golongan', 'Eksekutif IFCS')->where('tahun', $tahun)->sum('gabungan');
+        $gabungan1 = market_lintasan::where('golongan', 'Logistik IFCS  ')->where('tahun', $tahun)->sum('gabungan');
         $gabungan2 = market_lintasan::where('golongan', 'Logistik Eksekutif IFCS')->where('tahun', $tahun)->sum('gabungan');
         $gabungan3 = market_lintasan::where('golongan', 'Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('gabungan');
         $gabungan4 = market_lintasan::where('golongan', 'Logistik Redeem Eksekutif IFCS')->where('tahun', $tahun)->sum('gabungan');
@@ -230,6 +196,7 @@ class marketLintasanController extends Controller
         $totalBakauheni = $bakauheni1 + $bakauheni2 + $bakauheni3 + $bakauheni4;
         $totalGabungan = $gabungan1 + $gabungan2 + $gabungan3 + $gabungan4;
 
+    
         // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
             ['golongan' => 'Total', 'jenis' => 'ifcs', 'tahun' => $tahun],
@@ -258,6 +225,7 @@ class marketLintasanController extends Controller
 
         // Hitung total gabungan
         $totalGabungan = $totalMerak + $totalBakauheni;
+
 
         // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
@@ -288,11 +256,15 @@ class marketLintasanController extends Controller
         $bakauheniVIII = pelabuhan_bakauheni::where('golongan', 'VIII')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
         $bakauheniIX = pelabuhan_bakauheni::where('golongan', 'IX')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
 
+        // Hitung total untuk masing-masing pelabuhan
         $totalMerak = $merakIVB + $merakVB + $merakVIB + $merakVII + $merakVIII + $merakIX;
         $totalBakauheni = $bakauheniIVB + $bakauheniVB + $bakauheniVIB + $bakauheniVII + $bakauheniVIII + $bakauheniIX;
 
+        // Hitung total gabungan
         $totalGabungan = $totalMerak + $totalBakauheni;
 
+
+        // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
             ['golongan' => 'Logistik Reguler','jenis' => 'industri','tahun' => $tahun],
             [
@@ -303,7 +275,7 @@ class marketLintasanController extends Controller
         );
     }
 
-    public function simpanDataLogistikEksekutifNonIFCS($tahun)
+    public function simpanDataEksekkutifNonIFCS($tahun)
     {
         // Ambil data dari pelabuhan_merak
         $merakIVB = pelabuhan_merak::where('golongan', 'IVB')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
@@ -328,6 +300,7 @@ class marketLintasanController extends Controller
         // Hitung total gabungan
         $totalGabungan = $totalMerak + $totalBakauheni;
 
+
         // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
             ['golongan' => 'Logistik Eksekutif Non IFCS','jenis' => 'industri','tahun' => $tahun],
@@ -342,8 +315,8 @@ class marketLintasanController extends Controller
     public function simpanDataEksekutifNonIFCS($tahun)
     {
         // Ambil data dari pelabuhan_merak
-        $merakVA = pelabuhan_merak::where('golongan', 'VA')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
-        $merakVIA = pelabuhan_merak::where('golongan', 'VIA')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
+        $merakVA = pelabuhan_merak::where('golongan', 'VA')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
+        $merakVIA = pelabuhan_merak::where('golongan', 'VIA')->where('jenis', 'reguler')->where('tahun', $tahun)->sum('total');
 
         // Ambil data dari pelabuhan_bakauheni
         $bakauheniVA = pelabuhan_bakauheni::where('golongan', 'VA')->where('jenis', 'nonifcs')->where('tahun', $tahun)->sum('total');
@@ -356,6 +329,7 @@ class marketLintasanController extends Controller
         // Hitung total gabungan
         $totalGabungan = $totalMerak + $totalBakauheni;
 
+        
         // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
             ['golongan' => 'Eksekutif Non IFCS', 'jenis' => 'industri','tahun' => $tahun],
@@ -382,7 +356,7 @@ class marketLintasanController extends Controller
         $bakauheni4 = market_lintasan::where('golongan', 'Eksekutif Non IFCS')->where('tahun', $tahun)->sum('bakauheni');
     
         // Ambil data untuk kolom 'gabungan'
-        $gabungan1 = market_lintasan::where('golongan', 'Kendaraan Bus Reguler')->where('tahun', $tahun)->sum('gabungan');
+        $gabungan1 = market_lintasan::where('golongan', 'Kendaraan Bus Reguler  ')->where('tahun', $tahun)->sum('gabungan');
         $gabungan2 = market_lintasan::where('golongan', 'Logistik Reguler')->where('tahun', $tahun)->sum('gabungan');
         $gabungan3 = market_lintasan::where('golongan', 'Logistik Eksekutif Non IFCS')->where('tahun', $tahun)->sum('gabungan');
         $gabungan4 = market_lintasan::where('golongan', 'Eksekutif Non IFCS')->where('tahun', $tahun)->sum('gabungan');
@@ -391,6 +365,7 @@ class marketLintasanController extends Controller
         $totalMerak = $merak1 + $merak2 + $merak3 + $merak4;
         $totalBakauheni = $bakauheni1 + $bakauheni2 + $bakauheni3 + $bakauheni4;
         $totalGabungan = $gabungan1 + $gabungan2 + $gabungan3 + $gabungan4;
+
     
         // Simpan ke tabel market_lintasan
         market_lintasan::updateOrCreate(
