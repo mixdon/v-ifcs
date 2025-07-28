@@ -74,9 +74,11 @@ Route::middleware('auth')->group(function () {
 
         // Komposisi Segmen Routes
         Route::get('/komposisi-segmen', [komposisiSegmenController::class, 'index'])->name('komposisi.index');
+        Route::get('/komposisi-segmen/calculate/{tahun}', [komposisiSegmenController::class, 'runCalculationsForYear']);
 
         // Market Lintasan Routes
         Route::get('/market-lintasan', [marketLintasanController::class, 'index'])->name('market-lintasan.index');
+        Route::get('/market-lintasan/calculate/{tahun}', [marketLintasanController::class, 'runCalculationsForYear']);
 
         // Laba Kapal
         Route::get('/laba-kapal', [labaKapalController::class, 'index'])->name('laba-kapal.index');
