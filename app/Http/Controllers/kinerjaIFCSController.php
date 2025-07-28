@@ -34,7 +34,7 @@ class KinerjaIfcsController extends Controller
 
         $kinerja_ifcs = $query->get();
 
-        return view('kinerja-ifcs', compact('kinerja_ifcs', 'years', 'selectedYear'));
+        return view('ifcs/kinerja-ifcs', compact('kinerja_ifcs', 'years', 'selectedYear'));
     }
 
     /**
