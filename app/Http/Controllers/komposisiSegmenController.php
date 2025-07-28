@@ -8,63 +8,69 @@ use App\Http\Controllers\Controller;
 use App\Models\pelabuhan_merak;
 use App\Models\pelabuhan_bakauheni;
 use App\Models\komposisi_segmen;
+use Illuminate\Database\QueryException;
 
 class komposisiSegmenController extends Controller
 {
     public function index(Request $request)
     {
-    $currentYear = date('Y');
-    $startYear = 2020;
-    $validYears = range($startYear, $currentYear);
-    $tahun = $request->input('tahun', null);
+        $currentYear = date('Y');
+        $startYear = 2020;
+        $validYears = range($startYear, $currentYear);
+        $tahun = $request->input('tahun', null);
 
-    $years = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
+        $years = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
 
-    foreach ($years as $year) {
-        // Merak
-        $this->simpanDataMerakIVA($year);
-        $this->simpanDataMerakIVB($year);
-        $this->simpanDataMerakVA($year);
-        $this->simpanDataMerakVB($year);
-        $this->simpanDataMerakVIA($year);
-        $this->simpanDataMerakVIB($year);
-        $this->simpanDataMerakVII($year);
-        $this->simpanDataMerakVIII($year);
-        $this->simpanDataMerakIX($year);
-        $this->simpanDataTotalMerak($year);
+        try {
+            foreach ($years as $year) {
+                // Merak
+                $this->simpanDataMerakIVA($year);
+                $this->simpanDataMerakIVB($year);
+                $this->simpanDataMerakVA($year);
+                $this->simpanDataMerakVB($year);
+                $this->simpanDataMerakVIA($year);
+                $this->simpanDataMerakVIB($year);
+                $this->simpanDataMerakVII($year);
+                $this->simpanDataMerakVIII($year);
+                $this->simpanDataMerakIX($year);
+                $this->simpanDataTotalMerak($year);
 
-        // Bakauheni
-        $this->simpanDataBakauheniIVA($year);
-        $this->simpanDataBakauheniIVB($year);
-        $this->simpanDataBakauheniVA($year);
-        $this->simpanDataBakauheniVB($year);
-        $this->simpanDataBakauheniVIA($year);
-        $this->simpanDataBakauheniVIB($year);
-        $this->simpanDataBakauheniVII($year);
-        $this->simpanDataBakauheniVIII($year);
-        $this->simpanDataBakauheniIX($year);
-        $this->simpanDataTotalBakauheni($year);
+                // Bakauheni
+                $this->simpanDataBakauheniIVA($year);
+                $this->simpanDataBakauheniIVB($year);
+                $this->simpanDataBakauheniVA($year);
+                $this->simpanDataBakauheniVB($year);
+                $this->simpanDataBakauheniVIA($year);
+                $this->simpanDataBakauheniVIB($year);
+                $this->simpanDataBakauheniVII($year);
+                $this->simpanDataBakauheniVIII($year);
+                $this->simpanDataBakauheniIX($year);
+                $this->simpanDataTotalBakauheni($year);
 
-        // Gabungan
-        $this->simpanDataGabunganIVA($year);
-        $this->simpanDataGabunganIVB($year);
-        $this->simpanDataGabunganVA($year);
-        $this->simpanDataGabunganVB($year);
-        $this->simpanDataGabunganVIA($year);
-        $this->simpanDataGabunganVIB($year);
-        $this->simpanDataGabunganVII($year);
-        $this->simpanDataGabunganVIII($year);
-        $this->simpanDataGabunganIX($year);
-        $this->simpanDataTotalGabungan($year);
-    }
+                // Gabungan
+                $this->simpanDataGabunganIVA($year);
+                $this->simpanDataGabunganIVB($year);
+                $this->simpanDataGabunganVA($year);
+                $this->simpanDataGabunganVB($year);
+                $this->simpanDataGabunganVIA($year);
+                $this->simpanDataGabunganVIB($year);
+                $this->simpanDataGabunganVII($year);
+                $this->simpanDataGabunganVIII($year);
+                $this->simpanDataGabunganIX($year);
+                $this->simpanDataTotalGabungan($year);
+            }
+        } catch (QueryException $e) {
+            // Tangkap dan tampilkan error
+            return redirect()->route('komposisi.index')->with('error', 'Terjadi error database: ' . $e->getMessage());
+        }
 
-    $komposisi_segmen = komposisi_segmen::whereIn('tahun', $years)->get();
+        $komposisi_segmen = komposisi_segmen::whereIn('tahun', $years)->get();
 
-    return view('ifcs.komposisi-segmen', [
-        'komposisi_segmen' => $komposisi_segmen,
-        'years' => $validYears,
-        'selectedYear' => $tahun 
-    ]);
+        return view('ifcs.komposisi-segmen', [
+            'komposisi_segmen' => $komposisi_segmen,
+            'years' => $validYears,
+            'selectedYear' => $tahun 
+        ]);
     }
 
     //Merak
@@ -832,4 +838,4 @@ class komposisiSegmenController extends Controller
             ]
         );
     }  
-}   
+}

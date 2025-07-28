@@ -311,7 +311,7 @@
                         </div>
                         {{-- Button untuk menjalankan ETL --}}
                         <div class="col-sm-2 d-flex align-items-end">
-                            <button type="button" id="run-etl-button" class="btn btn-info mt-3">Jalankan ETL</button>
+                            <button type="button" id="run-etl-button" class="btn btn-info mt-3">Proses Data</button>
                         </div>
                         <div class="col-sm-7">
                             <div class="row">

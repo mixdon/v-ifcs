@@ -8,41 +8,47 @@ use App\Http\Controllers\Controller;
 use App\Models\pelabuhan_merak;
 use App\Models\pelabuhan_bakauheni;
 use App\Models\market_lintasan;
+use Illuminate\Database\QueryException;
 
 class marketLintasanController extends Controller
 {        
     public function index(Request $request)
     {
-    $currentYear = date('Y');
-    $startYear = 2020;
-    $validYears = range($startYear, $currentYear);
-    $tahun = $request->input('tahun', null);
+        $currentYear = date('Y');
+        $startYear = 2020;
+        $validYears = range($startYear, $currentYear);
+        $tahun = $request->input('tahun', null);
 
-    $years = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
+        $years = $tahun && in_array($tahun, $validYears) ? [$tahun] : $validYears;
 
-    foreach ($years as $year) {
-            // IFCS
-            $this->simpanDataEksekutifIFCS($year);
-            $this->simpanDataLogistikEksekutifIFCS($year);
-            $this->simpanDataRedeemEksekutifIFCS($year);
-            $this->simpanDataLogistikRedeemEksekutifIFCS($year);
-            $this->simpanDataTotalIFCS($year);
-        
-            // INDUSTRI
-            $this->simpanDataBusReguler($year);
-            $this->simpanDataLogistikReguler($year);
-            $this->simpanDataEksekkutifNonIFCS($year);
-            $this->simpanDataEksekutifNonIFCS($year);
-            $this->simpanDataTotalINDUSTRI($year);
-    }
+        try {
+            foreach ($years as $year) {
+                // IFCS
+                $this->simpanDataEksekutifIFCS($year);
+                $this->simpanDataLogistikEksekutifIFCS($year);
+                $this->simpanDataRedeemEksekutifIFCS($year);
+                $this->simpanDataLogistikRedeemEksekutifIFCS($year);
+                $this->simpanDataTotalIFCS($year);
+            
+                // INDUSTRI
+                $this->simpanDataBusReguler($year);
+                $this->simpanDataLogistikReguler($year);
+                $this->simpanDataEksekkutifNonIFCS($year);
+                $this->simpanDataEksekutifNonIFCS($year);
+                $this->simpanDataTotalINDUSTRI($year);
+            }
+        } catch (QueryException $e) {
+            // Tangkap dan tampilkan error
+            return redirect()->route('market-lintasan.index')->with('error', 'Terjadi error database: ' . $e->getMessage());
+        }
 
-    $market_lintasan = market_lintasan::whereIn('tahun', $years)->get();
+        $market_lintasan = market_lintasan::whereIn('tahun', $years)->get();
 
-    return view('ifcs.market-lintasan', [
-        'market_lintasan' => $market_lintasan,
-        'years' => $validYears,
-        'selectedYear' => $tahun 
-    ]);
+        return view('ifcs.market-lintasan', [
+            'market_lintasan' => $market_lintasan,
+            'years' => $validYears,
+            'selectedYear' => $tahun 
+        ]);
     }      
     
     //IFCS
